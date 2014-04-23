@@ -11,12 +11,14 @@ from time import sleep                  # pausing
 from datetime import datetime           # timestamp
 from sys import exit                    # program exit
 import thread                           # multithreading
+import threading
 import ConfigParser                     # read config file
 
 
 # global variables
-commandList = [0,0,0] # 3 input sources: button, logs, remote button
-latestValues = {'voltage' : -1, 'amps' : -1, 'temp' : -1};
+commandList = [0,0,0]                                       # 3 input sources: button, logs, remote button
+latestValues = {'voltage' : -1, 'amps' : -1, 'temp' : -1};  # most recent values of sensor reading
+tripCount = 0;                                              # number of times relay has tripped in set period
 
 # define functions (which usually are individual threads)
 
@@ -31,19 +33,27 @@ def valueUpdate():
     
 # # always checking to see if the device needs to shutoff
 def commander():
+    p
     global commandList
     while(1):
-        if (commandList.count(0) > 0) #shutdown
-        else #on
+        if (commandList.count(0) > 0): GPIO.output("P9_42", GPIO.LOW)
+        else: GPIO.output("P9_42", GPIO.HIGH)
         
         #check if values are out of range
-        # if so turn off valueUpdate (change from thread module to threading)
         # wait 30 seconds then turn back on, if occuring twice in 10 min period leave off
+        if
+        
         
         #check if button has been pressed
         #toggle off
         
-        
+def resetLocalOff():
+    global commandList
+    commandList.insert(1,1);
+    
+def resetTripCount():
+    global tripCount
+    tripCount = 0;
 
 # # this thread handles all cloud interaction      
 def logger():
@@ -75,6 +85,7 @@ ADC.setup()
 GPIO.setup("P9_41", GPIO.OUT)
 GPIO.setup("P9_42", GPIO.OUT)
 
+#TODO: handle no ini file
 Config = ConfigParser.ConfigParser()
 Config.read("config.ini")
 
