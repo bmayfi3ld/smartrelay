@@ -26,6 +26,7 @@ while datetime.datetime.today().year < 2015:
     sleep(5)
 
 # global variables
+directory = '/var/lib/cloud9/workspace/smartrelay/'
 command_list = [0, 0, 1, 1]     # 4 sources: button, logs, remote, amps
 latest_values = {
     'voltage'   : -1,
@@ -62,7 +63,7 @@ last_email = datetime.datetime.today() - datetime.timedelta(days=1)  # last time
 
 # global setup
 Config = ConfigParser.ConfigParser()    # read in config file
-Config.read("/var/lib/cloud9/smartrelay/smartrelay/config.ini")
+Config.read(directory + 'config.ini')
 
 # define threads
 
@@ -206,7 +207,7 @@ def logger():
     global onoff
     
     # log init    
-    LOG_FILENAME = '/var/lib/cloud9/smartrelay/smartrelay/data.log'
+    LOG_FILENAME = directory + 'data.log'
     # Set up a specific logger with our desired output level
     my_logger = logging.getLogger('MyLogger')
     my_logger.setLevel(logging.DEBUG)
@@ -312,50 +313,50 @@ def cloud_logger():
     print('Cloud Thread Initialized')
     
     while True:
-        # try:
-        # create logs
-        newLog = str(datetime.datetime.today())
-        for variable, value in latest_values.iteritems():
-            newLog += ', ' + str(value)
-        # print(newLog)
-        logs.append_row(newLog.split(', '))
-        
-        # update cloud config page
-        cofig.update_acell('B1', onoff)
-        cofig.update_acell('B3', datetime.datetime.today())
-        
-        # check for command
-        if(cofig.acell('B2').value == 'off'): 
-            command_list[2] = 0
-        else: 
-            command_list[2] = 1
-    
-        # send email if needed
-        thresh_list = Config.options('Warning')
-        trip_count = 0
-        for item in thresh_list:
-            thresh_in = Config.get('Warning', item).split(',')
+        try:
+            # create logs
+            newLog = str(datetime.datetime.today())
+            for variable, value in latest_values.iteritems():
+                newLog += ', ' + str(value)
+            # print(newLog)
+            logs.append_row(newLog.split(', '))
             
-            item_v = latest_values[item]
-            if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
-                trip_count += 1
-        
-        if trip_count > 0:
-            # send email if one hasn't been sent today
-            print('email')
-            if (datetime.datetime.today()) - last_email < datetime.timedelta(days=1):
-                print 'email already sent today'
+            # update cloud config page
+            cofig.update_acell('B1', onoff)
+            cofig.update_acell('B3', datetime.datetime.today())
+            
+            # check for command
+            if(cofig.acell('B2').value == 'off'): 
+                command_list[2] = 0
             else: 
-                sendemail(item,item_v)
-                last_email = datetime.datetime.today()
+                command_list[2] = 1
         
-        sleep(15)
+            # send email if needed
+            thresh_list = Config.options('Warning')
+            trip_count = 0
+            for item in thresh_list:
+                thresh_in = Config.get('Warning', item).split(',')
+                
+                item_v = latest_values[item]
+                if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
+                    trip_count += 1
             
-        # except:
-        #     print('Cloud Thread Failed')
-        #     sleep(60)
-        #     cloud_logger()
-        #     return
+            if trip_count > 0:
+                # send email if one hasn't been sent today
+                print('email')
+                if (datetime.datetime.today()) - last_email < datetime.timedelta(days=1):
+                    print 'email already sent today'
+                else: 
+                    sendemail(item,item_v)
+                    last_email = datetime.datetime.today()
+            
+            sleep(15)
+            
+        except:
+            print('Cloud Thread Failed')
+            sleep(60)
+            cloud_logger()
+            return
     
 def sendemail(item, value):
     sender = Config.get('SmartRelay','email')
