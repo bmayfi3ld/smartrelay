@@ -42,3 +42,4 @@ This project makes use of several other GitHub projects under the MIT License, t
 
 * gspread - https://github.com/burnash/gspread - by: Anton Burnashev
 * Adafruit's BeagleBone IO Python Library - https://github.com/adafruit/adafruit-beaglebone-io-python - by: Justin Cooper
+* ARM Tools - https://github.com/RobertCNelson/tools - by: Robert Nelson
