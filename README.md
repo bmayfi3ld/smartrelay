@@ -1,0 +1,38 @@
+# SmartRelay
+Oklahoma State University - Capstone Design
+
+Control an outlet with detailed logs and offline support.
+
+Highlights
+* Uses common DIY components and public libraries
+* Quick setup
+* Enthusiast level of detail
+* Control an outlet with internet connection
+* Offline capabilities
+
+## Why
+
+In the Electrical Engineering program at Oklahoma State University you are required to take a capstone design class. Where you are required to use everything you have learned (or haven't learned) in a top level class to create an interesting and useful project. 
+
+This project similar to common consumer level smart wall outlets will let you control an outlet and receive information about its power usage. Where this project exceeds is when you see the extra enthusiast features it has. 
+
+After configuring the device can operate completely offline, logging and protecting your appliance without any support. If you have internet access however it will push its information to the cloud and allow remote disabling of the relay. 
+
+##Setup
+
+Run setup file from GitHub
+```sh
+wget https://github.com/supernova2468/smartrelay/raw/master/setup.sh
+chmod -X setup.sh
+./setup.sh
+```
+
+Setup Config file
+
+```sh
+cd smartrelay
+nano config
+```
+
+enter in required information
+
