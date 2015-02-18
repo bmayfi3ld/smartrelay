@@ -5,3 +5,5 @@ chmod +x dtc.sh
 ./dtc.sh
 sudo pip install Adafruit_BBIO
 sudo pip install gspread
+git clone https://github.com/supernova2468/smartrelay.git
+cd smartrelay
