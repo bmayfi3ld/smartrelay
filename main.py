@@ -9,23 +9,35 @@ import Adafruit_BBIO.ADC as ADC         # ADC control
 import Adafruit_BBIO.GPIO as GPIO       # GPIO control
 from time import sleep                  # pausing
 from datetime import datetime           # timestamp
-from sys import exit                    # program exit
 import thread                           # multithreading
 import threading
 import ConfigParser                     # read config file
+import logging                          # for basic local logging
+from os.path import isfile                   # checking for existing files
+
 
 
 # global variables
 commandList = [0,0,0]                                       # 3 input sources: button, logs, remote button
 latestValues = {'voltage' : -1, 'amps' : -1, 'temp' : -1};  # most recent values of sensor reading
-tripCount = 0;                                              # number of times relay has tripped in set period
+onoff = 'Off'                                               # relay on or off
+
+# global setup
+Config = ConfigParser.ConfigParser()    # read in config file
+Config.read("config.ini")
 
 # define functions (which usually are individual threads)
 
 # # the logger just takes the values and updates the global variables
 def valueUpdate():
     global latestValues
-    # Running average of the last 10 periods to get accurate frequency
+    
+    #I/O init
+    ADC.setup()
+    GPIO.setup("P9_41", GPIO.OUT)
+    GPIO.setup("P9_42", GPIO.OUT)   
+    
+    # running average of the last 10 periods to get accurate frequency
     while(1) :
         # start a loop that will run once per period
         # checked by finding max/min of voltage
@@ -33,7 +45,7 @@ def valueUpdate():
     
 # # always checking to see if the device needs to shutoff
 def commander():
-    p
+    #p
     global commandList
     while(1):
         if (commandList.count(0) > 0): GPIO.output("P9_42", GPIO.LOW)
@@ -41,69 +53,92 @@ def commander():
         
         #check if values are out of range
         # wait 30 seconds then turn back on, if occuring twice in 10 min period leave off
-        if
+        # if
         
-        
+        sleep(60)
         #check if button has been pressed
         #toggle off
-        
-def resetLocalOff():
-    global commandList
-    commandList.insert(1,1);
-    
-def resetTripCount():
-    global tripCount
-    tripCount = 0;
 
-# # this thread handles all cloud interaction      
+# # this thread handles dumb basic logging
 def logger():
+    print('Logging Thread')
+    global latestValues
+    
+    #logging init
+    if not isfile('data.log'):
+        logging.basicConfig(filename='data.log',level=logging.INFO, format='%(message)s')
+        newHeader = 'Time'
+        for variable in latestValues:
+            newHeader += ', ' + variable
+        logging.info(newHeader)
+    else:
+        logging.basicConfig(filename='data.log',level=logging.INFO, format='%(message)s')
+        
+    print('Logging Thread Initialized')
+    
+    #main loop
     while(1):
-        # update local/cloud logs\
-        # use logging module
-        # push/pull relevant data
         
-        #TODO: Handle no internet
+        #create logs
+        newLog = str(datetime.today())
+        for variable, value in latestValues.iteritems():
+            newLog += ', ' + str(value)
+        logging.info(newLog);
+        
+        sleep(15)
+
+def cloudlogger():
+    print('Cloud Thread')
+    
+    global latestValues
+    global commandList
+    global onoff
+    
+    #cloud init
+    try:
         gc = gspread.login(Config.get('SmartRelay','email'), Config.get('SmartRelay','psww'))
-        wkb = gc.open("Cloud")
+        wkb = gc.open_by_url(Config.get('SmartRelay','sheet URL'))
         logs = wkb.worksheet("logs")
-        comm = wkb.worksheet("config")
+        cofig = wkb.worksheet("config")
+    except:
+        print('Cloud Connection Failed')
+        sleep(30)
+        cloudlogger()
+        return
+    
+    print('Cloud Thread Initialized')
+    
+    #main loop
+    while(1):
         
-        # Check if need to shutdown
-        # if(comm.acell('B2').value == "Off"): 
-        #     GPIO.output("P9_42", GPIO.LOW)
-        # else:
-        #     GPIO.output("P9_42", GPIO.HIGH) #TODO: will need to account for other sources, perhaps a manager
-        # if(GPIO.input("P9_42")):
-        #     comm.update_acell('B1',"On")
-        # else:
-        #     comm.update_acell('B1',"Off")
-
-
-
-# setup
-ADC.setup()
-GPIO.setup("P9_41", GPIO.OUT)
-GPIO.setup("P9_42", GPIO.OUT)
-
-#TODO: handle no ini file
-Config = ConfigParser.ConfigParser()
-Config.read("config.ini")
-
-
-
+        #create logs
+        newLog = str(datetime.today())
+        for variable, value in latestValues.iteritems():
+            newLog += ', ' + str(value)
+        
+        logs.append_row(newLog.split(', '))
+        
+        #update cloud config page
+        cofig.update_acell('B1', onoff)
+        cofig.update_acell('B3', datetime.today())
+        
+        #check for command
+        if(cofig.acell('B2').value == 'Off'): commandList[2] = 0
+        else: commandList[2] = 1
+        
+        sleep(15)
 
 print('Initialized')
 
+
 # start threads
 thread.start_new_thread(logger, ( ))
-thread.start_new_thread(commanderTest, ( ))
+thread.start_new_thread(cloudlogger, ( ))
+# thread.start_new_thread(commanderTest, ( ))
 # thread.start_new_thread(checkRemote, ( ))
 print('Threads Started')
 
 
-
-input("Press Enter to kill program\n")
-GPIO.setup("P9_41", GPIO.IN)
+raw_input("Press Enter to kill program\n")
 print('Done')
-exit()
 
