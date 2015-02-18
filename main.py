@@ -18,9 +18,10 @@ from os.path import isfile                   # checking for existing files
 
 
 # global variables
-commandList = [0,0,0]                                       # 3 input sources: button, logs, remote button
+commandList = [0,0,0,1]                                     # 4 checked sources: button, logs, remote button, current fault
 latestValues = {'voltage' : -1, 'amps' : -1, 'temp' : -1};  # most recent values of sensor reading
 onoff = 'Off'                                               # relay on or off
+button_status = 0                                           # 0 = nothing, 1 = command toggle, 2 = reset all command
 
 # global setup
 Config = ConfigParser.ConfigParser()    # read in config file
@@ -29,7 +30,7 @@ Config.read("config.ini")
 # define functions (which usually are individual threads)
 
 # # the logger just takes the values and updates the global variables
-def valueUpdate():
+def value_update():
     global latestValues
     
     #I/O init
@@ -45,19 +46,58 @@ def valueUpdate():
     
 # # always checking to see if the device needs to shutoff
 def commander():
-    #p
+    print('Commander Thread')
+    
     global commandList
+    global onoff
+    output_pin = "P9_42"
+    
+    # init
+    GPIO.setup(output_pin, GPIO.OUT)
+    
+    print('Commander Thread Initialized')
+    
     while(1):
-        if (commandList.count(0) > 0): GPIO.output("P9_42", GPIO.LOW)
-        else: GPIO.output("P9_42", GPIO.HIGH)
+        if (commandList.count(0) > 0): 
+            GPIO.output(output_pin, GPIO.LOW)
+            onoff = 'Off'
+        else: 
+            GPIO.output(output_pin, GPIO.HIGH)
+            onoff = 'On'
         
-        #check if values are out of range
-        # wait 30 seconds then turn back on, if occuring twice in 10 min period leave off
-        # if
+        # check if values are out of range
+        # if out of thresh(from config) turn off until return
+        # if out of thresh for current kill until further notice
         
-        sleep(60)
-        #check if button has been pressed
-        #toggle off
+        # check if button has something to say
+        # basic on/off 1
+        # hard reset 2 (cloud also needs to be able to)
+        
+# # button thread to handle button commands
+def button_interrupt():
+    
+    global button_status
+    button_pin = 'P9_11' #GPIO 30
+    count = 0
+    
+    # init
+    GPIO.setup(button_pin, GPIO.IN)
+    
+    # main loop
+    while(1):
+        
+        GPIO.wait_for_edge(button_pin, GPIO.RISING)    # wait for initial hit
+        
+        while(GPIO.input(button_pin)):
+            count += 1
+            
+        if count > 50000:
+            button_status = 2
+        elif count > 1500:
+            button_status = 1
+            
+        count = 0
+        sleep(1)
 
 # # this thread handles dumb basic logging
 def logger():
@@ -76,7 +116,7 @@ def logger():
         
     print('Logging Thread Initialized')
     
-    #main loop
+    # main loop
     while(1):
         
         #create logs
@@ -86,8 +126,9 @@ def logger():
         logging.info(newLog);
         
         sleep(15)
-
-def cloudlogger():
+        
+# # this thread handles cloud logging and pulling commands
+def cloud_logger():
     print('Cloud Thread')
     
     global latestValues
@@ -132,8 +173,11 @@ print('Initialized')
 
 
 # start threads
-thread.start_new_thread(logger, ( ))
-thread.start_new_thread(cloudlogger, ( ))
+# thread.start_new_thread(logger, ( ))
+# thread.start_new_thread(cloud_logger, ( ))
+thread.start_new_thread(button_interrupt, ( ))
+
+
 # thread.start_new_thread(commanderTest, ( ))
 # thread.start_new_thread(checkRemote, ( ))
 print('Threads Started')
