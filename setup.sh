@@ -1,5 +1,6 @@
 sudo apt-get update
-sudo apt-get install build-essential python-dev python-setuptools python-pip python-smbus -y
+sudo apt-get install build-essential python-dev python-setuptools python-pip python-smbus ntpdate -y
+ntpdate 0.us.pool.ntp.org
 wget -c https://raw.github.com/RobertCNelson/tools/master/pkgs/dtc.sh
 chmod +x dtc.sh
 ./dtc.sh
