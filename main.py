@@ -19,7 +19,7 @@ from os.path import isfile                   # checking for existing files
 
 # global variables
 commandList = [0,0,0,1]                                     # 4 checked sources: button, logs, remote button, current fault
-latestValues = {'voltage' : -1, 'amps' : -1, 'temp' : -1};  # most recent values of sensor reading
+latestValues = {'voltage' : 120, 'amps' : 6, 'temp' : 60};  # most recent values of sensor reading
 onoff = 'Off'                                               # relay on or off
 button_status = 0                                           # 0 = nothing, 1 = command toggle, 2 = reset all command
 
@@ -50,6 +50,8 @@ def commander():
     
     global commandList
     global onoff
+    global button_status
+    global latestValues
     output_pin = "P9_42"
     
     # init
@@ -68,10 +70,26 @@ def commander():
         # check if values are out of range
         # if out of thresh(from config) turn off until return
         # if out of thresh for current kill until further notice
+        # thresh_list = Config.options('Threshold')
+        # for item in thresh_list:
+        #     thresh_in = Config.get('Threshold',item).split(',')
+        #     # print(latestValues[item])
+        #     # print(thresh_in[1])
+        #     # print(thresh_in[0])
+        #     sleep(1)
+        #     if ((latestValues[item] > thresh_in[1]) or (latestValues[item] < thresh_in[0])):
+        #         commandList[1] = 0
+        #     else:
+        #         commandList[1] = 1
+        commandList[1] = 1
         
         # check if button has something to say
         # basic on/off 1
         # hard reset 2 (cloud also needs to be able to)
+        if (button_status == 1):
+            commandList[0] = not commandList[0]
+            button_status = 0
+            sleep(1)
         
 # # button thread to handle button commands
 def button_interrupt():
@@ -144,7 +162,7 @@ def cloud_logger():
     except:
         print('Cloud Connection Failed')
         sleep(30)
-        cloudlogger()
+        cloud_logger()
         return
     
     print('Cloud Thread Initialized')
@@ -168,17 +186,34 @@ def cloud_logger():
         else: commandList[2] = 1
         
         sleep(15)
+        
+def debug():
+    print('Debugging')
+    global commandList
+    global onoff
+    global button_status
+    
+    num = 0
+    
+    sleep(15)
+    
+    while(1):
+        print(onoff)
+        print(num)
+        num += 1
+        print(commandList)
+        sleep(5)
 
 print('Initialized')
 
 
 # start threads
-# thread.start_new_thread(logger, ( ))
-# thread.start_new_thread(cloud_logger, ( ))
+thread.start_new_thread(logger, ( ))
+thread.start_new_thread(cloud_logger, ( ))
 thread.start_new_thread(button_interrupt, ( ))
+thread.start_new_thread(commander, ( ))
+thread.start_new_thread(debug, ( ))
 
-
-# thread.start_new_thread(commanderTest, ( ))
 # thread.start_new_thread(checkRemote, ( ))
 print('Threads Started')
 
