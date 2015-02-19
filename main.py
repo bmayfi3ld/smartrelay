@@ -43,6 +43,7 @@ def value_update():
         # start a loop that will run once per period
         # checked by finding max/min of voltage
         latestValues['voltage'] = ADC.read("AIN1") * 1.8
+        
     
 # # always checking to see if the device needs to shutoff
 def commander():
