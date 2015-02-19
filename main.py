@@ -70,18 +70,14 @@ def commander():
         # check if values are out of range
         # if out of thresh(from config) turn off until return
         # if out of thresh for current kill until further notice
-        # thresh_list = Config.options('Threshold')
-        # for item in thresh_list:
-        #     thresh_in = Config.get('Threshold',item).split(',')
-        #     # print(latestValues[item])
-        #     # print(thresh_in[1])
-        #     # print(thresh_in[0])
-        #     sleep(1)
-        #     if ((latestValues[item] > thresh_in[1]) or (latestValues[item] < thresh_in[0])):
-        #         commandList[1] = 0
-        #     else:
-        #         commandList[1] = 1
-        commandList[1] = 1
+        thresh_list = Config.options('Threshold')
+        for item in thresh_list:
+            thresh_in = Config.get('Threshold',item).split(',')
+            if latestValues[item] > int(thresh_in[1]) or latestValues[item] < int(thresh_in[0]):
+                commandList[1] = 0
+            else:
+                commandList[1] = 1
+        # commandList[1] = 1
         
         # check if button has something to say
         # basic on/off 1
