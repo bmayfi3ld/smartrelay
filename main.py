@@ -13,7 +13,8 @@ import thread                           # multithreading
 import threading
 import ConfigParser                     # read config file
 import logging                          # for basic local logging
-from os.path import isfile                   # checking for existing files
+from os.path import isfile              # checking for existing files
+import Adafruit_CharLCD as LCD          # lcd driver
 
 
 
@@ -118,6 +119,7 @@ def button_interrupt():
 def logger():
     print('Logging Thread')
     global latestValues
+    global onoff
     
     #logging init
     if not isfile('data.log'):
@@ -129,6 +131,21 @@ def logger():
     else:
         logging.basicConfig(filename='data.log',level=logging.INFO, format='%(message)s')
         
+    #lcd init
+    lcd_rs        = 'P8_8'
+    lcd_en        = 'P8_10'
+    lcd_d4        = 'P8_18'
+    lcd_d5        = 'P8_16'
+    lcd_d6        = 'P8_14'
+    lcd_d7        = 'P8_12'
+    lcd_backlight = 'P8_7'
+    
+    lcd_columns = 16
+    lcd_rows    = 2 
+    
+    lcd = LCD.Adafruit_CharLCD(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, 
+                           lcd_columns, lcd_rows, lcd_backlight)
+        
     print('Logging Thread Initialized')
     
     # main loop
@@ -139,6 +156,9 @@ def logger():
         for variable, value in latestValues.iteritems():
             newLog += ', ' + str(value)
         logging.info(newLog);
+        
+        lcd.clear()
+        lcd.message('Voltage:' + newLog.split(',')[2] + '\nStatus: ' + onoff)
         
         sleep(15)
         
