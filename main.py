@@ -15,12 +15,13 @@ import ConfigParser                     # read config file
 import logging                          # for basic local logging
 from os.path import isfile              # checking for existing files
 import Adafruit_CharLCD as LCD          # lcd driver
+import Adafruit_DHT                     # temp and humidity sensor driver
 
 
 
 # global variables
-commandList = [0,0,0,1]                                     # 4 checked sources: button, logs, remote button, current fault
-latestValues = {'voltage' : 120, 'amps' : 6, 'temp' : 60};  # most recent values of sensor reading
+commandList = [0,0,1,1]                                     # 4 checked sources: button, logs, remote button, current fault
+latestValues = {'voltage' : 120, 'amps' : 6, 'temp' : 60, 'battery' : -1, 'humidity' : -1};  # most recent values of sensor reading
 onoff = 'Off'                                               # relay on or off
 button_status = 0                                           # 0 = nothing, 1 = command toggle, 2 = reset all command
 
@@ -35,15 +36,18 @@ def value_update():
     global latestValues
     
     #I/O init
+    
     ADC.setup()
-    GPIO.setup("P9_41", GPIO.OUT)
-    GPIO.setup("P9_42", GPIO.OUT)   
+    # GPIO.setup("P9_41", GPIO.OUT)
+    # GPIO.setup("P9_42", GPIO.OUT)   
     
     # running average of the last 10 periods to get accurate frequency
     while(1) :
         # start a loop that will run once per period
         # checked by finding max/min of voltage
-        latestValues['voltage'] = ADC.read("AIN1") * 1.8
+        latestValues['battery'] = ADC.read("AIN1") * 1.8 * 10
+        sleep(1)
+        
         
     
 # # always checking to see if the device needs to shutoff
@@ -73,13 +77,20 @@ def commander():
         # if out of thresh(from config) turn off until return
         # if out of thresh for current kill until further notice
         thresh_list = Config.options('Threshold')
+        trip_count = 0
         for item in thresh_list:
+            
             thresh_in = Config.get('Threshold',item).split(',')
+            
+                
             if latestValues[item] > int(thresh_in[1]) or latestValues[item] < int(thresh_in[0]):
-                commandList[1] = 0
-            else:
-                commandList[1] = 1
-        # commandList[1] = 1
+                trip_count += 1
+                print(item + ' is out of range at ' + str(latestValues[item]))
+        
+        if trip_count > 0:
+            commandList[1] = 0
+        else:
+            commandList[1] = 1
         
         # check if button has something to say
         # basic on/off 1
@@ -142,14 +153,26 @@ def logger():
     
     lcd_columns = 16
     lcd_rows    = 2 
+    slide = 2
     
     lcd = LCD.Adafruit_CharLCD(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, 
                            lcd_columns, lcd_rows, lcd_backlight)
+                           
+    # temp/humidity sensor
+    temp_pin = 'P9_12' # GPIO_60
+    
         
     print('Logging Thread Initialized')
     
     # main loop
     while(1):
+        # get temp
+        humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, temp_pin)
+        temp = 9.0/5.0 * temp + 32
+        latestValues['temp'] = temp
+        latestValues['humidity'] = humidity
+        
+        # 'Temp={0:0.1f}*C  Humidity={1:0.1f}%'.format(temperature, humidity)
         
         #create logs
         newLog = str(datetime.today())
@@ -158,7 +181,12 @@ def logger():
         logging.info(newLog);
         
         lcd.clear()
-        lcd.message('Voltage:' + newLog.split(',')[2] + '\nStatus: ' + onoff)
+        if slide == 1:
+            lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nStatus: ' + onoff)
+            slide += 1
+        elif slide == 2:
+            lcd.message('Bat Volt:' + str(latestValues['battery']) + '\nStatus: ' + onoff)
+            slide = 1
         
         sleep(15)
         
@@ -230,8 +258,8 @@ thread.start_new_thread(cloud_logger, ( ))
 thread.start_new_thread(button_interrupt, ( ))
 thread.start_new_thread(commander, ( ))
 thread.start_new_thread(debug, ( ))
+thread.start_new_thread(value_update, ( ))
 
-# thread.start_new_thread(checkRemote, ( ))
 print('Threads Started')
 
 
