@@ -21,7 +21,7 @@ import Adafruit_DHT                     # temp and humidity sensor driver
 
 # global variables
 commandList = [0,0,1,1]                                     # 4 checked sources: button, logs, remote button, current fault
-latestValues = {'voltage' : 120, 'amps' : 6, 'temp' : 60, 'battery' : -1, 'humidity' : -1};  # most recent values of sensor reading
+latestValues = {'voltage' : 120, 'amps' : 6, 'temp' : -1, 'battery' : -1, 'humidity' : -1};  # most recent values of sensor reading
 onoff = 'Off'                                               # relay on or off
 button_status = 0                                           # 0 = nothing, 1 = command toggle, 2 = reset all command
 
@@ -48,8 +48,6 @@ def value_update():
         latestValues['battery'] = ADC.read("AIN1") * 1.8 * 10
         sleep(1)
         
-        
-    
 # # always checking to see if the device needs to shutoff
 def commander():
     print('Commander Thread')
@@ -63,6 +61,7 @@ def commander():
     # init
     GPIO.setup(output_pin, GPIO.OUT)
     
+    sleep(15)
     print('Commander Thread Initialized')
     
     while(1):
@@ -85,7 +84,7 @@ def commander():
                 
             if latestValues[item] > int(thresh_in[1]) or latestValues[item] < int(thresh_in[0]):
                 trip_count += 1
-                print(item + ' is out of range at ' + str(latestValues[item]))
+                # print(item + ' is out of range at ' + str(latestValues[item]))
         
         if trip_count > 0:
             commandList[1] = 0
@@ -237,6 +236,7 @@ def debug():
     global commandList
     global onoff
     global button_status
+    global latestValues
     
     num = 0
     
@@ -247,6 +247,7 @@ def debug():
         print(num)
         num += 1
         print(commandList)
+        # print('Humidity is at ' + str(latestValues['humidity']))
         sleep(5)
 
 print('Initialized')
