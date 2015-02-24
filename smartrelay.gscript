@@ -20,7 +20,7 @@ function onOpen() {
   
   //add useful names to page
   var configArr = ['Status','Command','Email'];
-  var logArr = ['Voltage','Amps'];
+    var logArr = ['Timestamp','Battery Voltage','Amps','Voltage','Temperature', 'Humidity'];
   configArr = configArr.concat(logArr);
   var workingCell = ss.getSheetByName('config').getRange(1, 1);
   for(i = 0; i < configArr.length; i++) {

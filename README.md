@@ -31,7 +31,7 @@ Setup Config file
 
 ```sh
 cd smartrelay
-nano config
+nano config.ini
 ```
 
 Enter in required information
