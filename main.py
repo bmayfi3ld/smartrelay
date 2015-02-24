@@ -35,6 +35,7 @@ Config.read("config.ini")
 
 # # the logger just takes the values and updates the global variables
 def value_update():
+    print('Value Update Thread')
     global latestValues
     
     #I/O init
@@ -49,22 +50,27 @@ def value_update():
     
     sleep(1)
     
-    dready = 'P9_41'
-    GPIO.setup(dready, GPIO.IN) # GPIO_20
+    # dready = 'P9_41'
+    # GPIO.setup(dready, GPIO.IN) # GPIO_20
     
     # GPIO.wait_for_edge(dready, GPIO.RISING)
     
     # print(GPIO.input(dready))
+
+    spi = SPI(0,0)
+    spi.msh = 4000000 # 4 Mhz
+    spi.mode = 2
+    spi.bpw = 8
     
-    spi = SPI(0,1)
+    print('Value Update Initialized')
     
-    spi.msh = 5000000 # 5 Mhz
-    
-    sleep(1)
     while True:
-        print(spi.xfer2([0011001]))
-        sleep(2)
-    # print(spi.readbytes(8))
+        spi.writebytes([0b01000000])    # op code
+        spi.writebytes([0b00001101])    # value
+        spi.writebytes([0b01000100])    # op code (read)
+        # print(spi.readbytes(1))         # get value and print
+        spi.readbytes(1)                # get value
+        # sleep(1)
     
     # running average of the last 10 periods to get accurate frequency
     while(1) :
@@ -73,6 +79,8 @@ def value_update():
         latestValues['battery'] = ADC.read("AIN1") * 1.8 * 10
         sleep(1)
         
+    
+
 # # always checking to see if the device needs to shutoff
 def commander():
     print('Commander Thread')
