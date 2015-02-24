@@ -16,6 +16,8 @@ import logging                          # for basic local logging
 from os.path import isfile              # checking for existing files
 import Adafruit_CharLCD as LCD          # lcd driver
 import Adafruit_DHT                     # temp and humidity sensor driver
+import Adafruit_BBIO.PWM as PWM         # PWM
+from Adafruit_BBIO.SPI import SPI       # SPI
 
 
 
@@ -36,10 +38,33 @@ def value_update():
     global latestValues
     
     #I/O init
-    
     ADC.setup()
+    
     # GPIO.setup("P9_41", GPIO.OUT)
-    # GPIO.setup("P9_42", GPIO.OUT)   
+    # GPIO.setup("P9_42", GPIO.OUT)
+    
+    # SPI Init
+    PWM.cleanup()
+    PWM.start("P9_14",50, 4096000, 1) # GPIO_40 4096000
+    
+    sleep(1)
+    
+    dready = 'P9_41'
+    GPIO.setup(dready, GPIO.IN) # GPIO_20
+    
+    # GPIO.wait_for_edge(dready, GPIO.RISING)
+    
+    # print(GPIO.input(dready))
+    
+    spi = SPI(0,1)
+    
+    spi.msh = 5000000 # 5 Mhz
+    
+    sleep(1)
+    while True:
+        print(spi.xfer2([0011001]))
+        sleep(2)
+    # print(spi.readbytes(8))
     
     # running average of the last 10 periods to get accurate frequency
     while(1) :
@@ -254,16 +279,17 @@ print('Initialized')
 
 
 # start threads
-thread.start_new_thread(logger, ( ))
-thread.start_new_thread(cloud_logger, ( ))
-thread.start_new_thread(button_interrupt, ( ))
-thread.start_new_thread(commander, ( ))
-thread.start_new_thread(debug, ( ))
+# thread.start_new_thread(logger, ( ))
+# thread.start_new_thread(cloud_logger, ( ))
+# thread.start_new_thread(button_interrupt, ( ))
+# thread.start_new_thread(commander, ( ))
+# thread.start_new_thread(debug, ( ))
 thread.start_new_thread(value_update, ( ))
 
 print('Threads Started')
 
 
 raw_input("Press Enter to kill program\n")
+PWM.cleanup()
 print('Done')
 
