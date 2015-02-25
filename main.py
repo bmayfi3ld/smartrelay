@@ -41,53 +41,37 @@ def value_update():
     #I/O init
     ADC.setup()
     
-    # GPIO.setup("P9_41", GPIO.OUT)
-    # GPIO.setup("P9_42", GPIO.OUT)
+    # ADC init
+    # # give adc power
+    adc_power = 'P9_24' # GPIO_15
+    GPIO.setup(adc_power, GPIO.OUT)
+    GPIO.output(adc_power, GPIO.HIGH)
+    sleep(1)
     
-    # # SPI Init
-    # PWM.cleanup()
-    # PWM.start("P9_14",50, 4096000, 1) # GPIO_40 4096000
+    # # start clock for adc
+    PWM.cleanup()
+    PWM.start("P9_14",50, 4096000, 1) # GPIO_40 4096000
+    sleep(1)
     
-    # sleep(1)
     
-    # # dready = 'P9_41'
-    # # GPIO.setup(dready, GPIO.IN) # GPIO_20
-    
-    # # GPIO.wait_for_edge(dready, GPIO.RISING)
-    
-    # # print(GPIO.input(dready))
+    # dready = 'P9_41'
+    # GPIO.setup(dready, GPIO.IN) # GPIO_20
 
-    # spi = SPI(0,0)
-    # spi.msh = 4000000 # 4 Mhz
-    # spi.mode = 2
-    # spi.bpw = 8
-    # chip_select = 'P9_15' # GPIO_48
-    # GPIO.setup(chip_select, GPIO.OUT)
-    # GPIO.output(chip_select, GPIO.HIGH)
+    # SPI init
+    spi = SPI(0,0)
+    spi.msh = 4000000 # 4 Mhz
+    spi.mode = 3
+    spi.bpw = 8
+    sleep(1)
     
-    # # reset via SPI
-    # GPIO.output(chip_select, GPIO.LOW)
-    # spi.writebytes([0b00000000])
-    # spi.writebytes([0b00000000]) 
-    # spi.writebytes([0b00000000]) 
-    # spi.writebytes([0b00000000]) 
-    # spi.writebytes([0b00000000]) 
-    # spi.writebytes([0b00000000]) 
-    # spi.writebytes([0b00000000]) 
-    # spi.writebytes([0b00000000]) 
-    # GPIO.output(chip_select, GPIO.HIGH)
-    # sleep(1)
-    
-    # #boot-up
-    # trigger = True
-    # while(trigger):
-    #     GPIO.output(chip_select, GPIO.LOW)
-    #     spi.writebytes([0b01001100])    # op code read
-    #     value = spi.readbytes(1)        # get value
-    #     print(value)
-    #     sleep(1)
-    #     trigger = bin(value[0])[-1:]       # check last bit
-    #     GPIO.output(chip_select, GPIO.HIGH)
+    # wait for boot
+    trigger = True
+    while(trigger):
+        value = spi.xfer2([0b01001100, 0xff])        # get value
+        print(value)
+        sleep(1)
+        trigger = bin(value[0])[-1:]       # check last bit
+        sleep(1)
         
 
     
@@ -320,11 +304,11 @@ print('Initialized')
 
 
 # start threads
-thread.start_new_thread(logger, ( ))
-thread.start_new_thread(cloud_logger, ( ))
-thread.start_new_thread(button_interrupt, ( ))
-thread.start_new_thread(commander, ( ))
-thread.start_new_thread(debug, ( ))
+# thread.start_new_thread(logger, ( ))
+# thread.start_new_thread(cloud_logger, ( ))
+# thread.start_new_thread(button_interrupt, ( ))
+# thread.start_new_thread(commander, ( ))
+# thread.start_new_thread(debug, ( ))
 thread.start_new_thread(value_update, ( ))
 
 print('Threads Started')
