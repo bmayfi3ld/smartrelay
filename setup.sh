@@ -1,5 +1,3 @@
-cd ~
-sudo su
 sudo apt-get update
 sudo apt-get install build-essential python-dev python-setuptools python-pip python-smbus ntpdate -y
 ntpdate 0.us.pool.ntp.org
@@ -11,10 +9,10 @@ sudo pip install gspread
 git clone https://github.com/adafruit/Adafruit_Python_CharLCD.git
 cd Adafruit_Python_CharLCD
 sudo python setup.py install
-cd ~
+cd ..
 git clone https://github.com/adafruit/Adafruit_Python_DHT.git
 cd Adafruit_Python_DHT
 sudo python setup.py install
-cd ~
+cd ..
 git clone https://github.com/supernova2468/smartrelay.git
 cd smartrelay
