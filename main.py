@@ -44,7 +44,8 @@ pin_registry = {
     'lcd_d7'            : 'P8_12',
     'lcd_backlight'     : 'P8_7',
     'temp_input'        : 'P9_12',
-    'voltage_ain'       : 'P9_39'
+    'voltage_ain'       : 'P9_39',
+    'battery_ain'       : 'P9_40'
 }
 
 
@@ -71,25 +72,24 @@ def value_update():
     deviation_total = 0
     cycles = 50
     
-    
     print('Value Update Initialized')
     
     while True:
         # get battery voltage
-        latest_values['battery'] = ADC.read("AIN1") * 1.8 * 10
+        latest_values['battery'] = ADC.read(pin_registry['battery_ain']) * 1.8 * 10
         
         # frequency measure
         start = time.time()
-        for i in range(cycles):
-            GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.FALLING)
+        # for i in range(cycles):
+            # GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.FALLING)
         duration = time.time() - start
         value = cycles / duration
-        print(value)
+        # print(value)
         latest_values['frequency'] = value
-        deviation_total += abs(value - correct)
-        deviation = deviation_total / attempts
-        print(deviation)
-        attempts += 1
+        # deviation_total += abs(value - correct)
+        # deviation = deviation_total / attempts
+        # print(deviation)
+        # attempts += 1
         
         # peak measure
         voltage = 0
@@ -97,6 +97,8 @@ def value_update():
             value = ADC.read(pin_registry['voltage_ain']) * 1.8
             if value > voltage:
                 voltage = value
+        latest_values['voltage'] = voltage
+        print(voltage)
         
         sleep(1)
         
@@ -309,11 +311,11 @@ print('Initialized')
 
 
 # start threads
-thread.start_new_thread(logger, ())
-thread.start_new_thread(cloud_logger, ())
-thread.start_new_thread(button_interrupt, ())
-thread.start_new_thread(commander, ())
-thread.start_new_thread(debug, ())
+# thread.start_new_thread(logger, ())
+# thread.start_new_thread(cloud_logger, ())
+# thread.start_new_thread(button_interrupt, ())
+# thread.start_new_thread(commander, ())
+# thread.start_new_thread(debug, ())
 thread.start_new_thread(value_update, ())
 
 print('Threads Started')
