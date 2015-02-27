@@ -1,8 +1,6 @@
 # main.py
 # main loop to be run on a beaglebone for use with other smart relay components
-# Author: Brandon Mayfield 
-
-print('Starting Up')
+# Author: Brandon Mayfield
 
 import gspread                          # allows access to Google spreadsheets
 import Adafruit_BBIO.ADC as ADC         # ADC control
@@ -20,13 +18,35 @@ import Adafruit_DHT                     # temp and humidity sensor driver
 import Adafruit_BBIO.PWM as PWM         # PWM
 from Adafruit_BBIO.SPI import SPI       # SPI
 
-
+print('Starting Up')
 
 # global variables
-commandList = [0,0,1,1]                                     # 4 checked sources: button, logs, remote button, current fault
-latestValues = {'voltage' : 120, 'amps' : 6, 'temp' : -1, 'battery' : -1, 'humidity' : -1};  # most recent values of sensor reading
-onoff = 'Off'                                               # relay on or off
-button_status = 0                                           # 0 = nothing, 1 = command toggle, 2 = reset all command
+command_list = [0, 0, 1, 1]     # 4 sources: button, logs, remote, amps
+latest_values = {
+    'voltage'   : 120,
+    'amps'      : 6,
+    'temp'      : -1,
+    'battery'   : -1,
+    'humidity'  : -1,
+    'frequency' : -1
+}                               # most recent values of sensor reading
+onoff = 'Off'                   # relay on or off
+button_status = 0               # 1 = command toggle, 2 = reset all
+pin_registry = {
+    'relay_output'      : 'P9_42',
+    'frequency_input'   : 'P9_15',
+    'button_input'      : 'P9_11',
+    'lcd_rs'            : 'P8_8',
+    'lcd_en'            : 'P8_10',
+    'lcd_d4'            : 'P8_18',
+    'lcd_d5'            : 'P8_16',
+    'lcd_d6'            : 'P8_14',
+    'lcd_d7'            : 'P8_12',
+    'lcd_backlight'     : 'P8_7',
+    'temp_input'        : 'P9_12',
+    'voltage_ain'       : 'P9_39'
+}
+
 
 # global setup
 Config = ConfigParser.ConfigParser()    # read in config file
@@ -37,112 +57,72 @@ Config.read("config.ini")
 # # the logger just takes the values and updates the global variables
 def value_update():
     print('Value Update Thread')
-    
-    global latestValues
-    frequency_pin = "P9_15" # GPIO_48
-    
-    #I/O init
+
+    global latest_values
+    global pin_registry
+
+    # I/O init
     ADC.setup()
-    GPIO.setup(frequency_pin, GPIO.IN)
+    GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
     
-    
-    # # ADC init
-    # # # give adc power
-    # adc_power = 'P9_24' # GPIO_15
-    # GPIO.setup(adc_power, GPIO.OUT)
-    # GPIO.output(adc_power, GPIO.HIGH)
-    # sleep(1)
-    
-    # # # start clock for adc
-    # PWM.cleanup()
-    # PWM.start("P9_14",50, 4096000, 1) # GPIO_40 4096000
-    # sleep(1)
-    
-    
-    # # dready = 'P9_41'
-    # # GPIO.setup(dready, GPIO.IN) # GPIO_20
-
-    # # SPI init
-    # spi = SPI(0,0)
-    # spi.msh = 4000000 # 4 Mhz
-    # spi.mode = 3
-    # spi.bpw = 8
-    # sleep(1)
-    
-    # # wait for boot
-    # trigger = True
-    # while(trigger):
-    #     value = spi.xfer2([0b01001100, 0xff])        # get value
-    #     print(value)
-    #     sleep(1)
-    #     trigger = bin(value[0])[-1:]       # check last bit
-    #     sleep(1)
-        
-
-    
-    print('Value Update Initialized')
-    
-    # while True:
-    #     GPIO.output(chip_select, GPIO.LOW)
-    #     spi.writebytes([0b01000000])    # op code
-    #     spi.writebytes([0b00001101])    # value
-    #     GPIO.output(chip_select, GPIO.HIGH)
-    #     GPIO.output(chip_select, GPIO.LOW)
-    #     spi.writebytes([0b01000100])    # op code (read)
-    #     # print(spi.readbytes(1))         # get value and print
-    #     spi.readbytes(2)                # get value
-    #     GPIO.output(chip_select, GPIO.HIGH)
-    #     # sleep(1)
-    
-    # running average of the last 10 periods to get accurate frequency
-    
+    # sd calc init
     correct = 50
     attempts = 1
     deviation_total = 0
-    while(1) :
+    cycles = 50
+    
+    
+    print('Value Update Initialized')
+    
+    while True:
         # get battery voltage
-        latestValues['battery'] = ADC.read("AIN1") * 1.8 * 10
+        latest_values['battery'] = ADC.read("AIN1") * 1.8 * 10
         
-        
-
-        # frequency measure 
-        cycles = 50
+        # frequency measure
         start = time.time()
         for i in range(cycles):
-            GPIO.wait_for_edge(frequency_pin, GPIO.FALLING)
+            GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.FALLING)
         duration = time.time() - start
         value = cycles / duration
         print(value)
+        latest_values['frequency'] = value
         deviation_total += abs(value - correct)
         deviation = deviation_total / attempts
         print(deviation)
         attempts += 1
+        
+        # peak measure
+        voltage = 0
+        for i in range(cycles):
+            value = ADC.read(pin_registry['voltage_ain']) * 1.8
+            if value > voltage:
+                voltage = value
+        
         sleep(1)
         
-    
-
 # # always checking to see if the device needs to shutoff
 def commander():
     print('Commander Thread')
     
-    global commandList
+    global command_list
     global onoff
     global button_status
-    global latestValues
-    output_pin = "P9_42"
+    global latest_values
+    global pin_registry
     
     # init
-    GPIO.setup(output_pin, GPIO.OUT)
+    GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
+    sleep(15)   # delay to allow other commands to init
     
-    sleep(15)
     print('Commander Thread Initialized')
     
-    while(1):
-        if (commandList.count(0) > 0): 
-            GPIO.output(output_pin, GPIO.LOW)
+    while True:
+        # basic shutoff check
+        if (command_list.count(0) > 0):
+            GPIO.output(pin_registry['relay_output'], GPIO.LOW)
             onoff = 'Off'
         else: 
-            GPIO.output(output_pin, GPIO.HIGH)
+            GPIO.output(pin_registry['relay_output'], GPIO.HIGH)
             onoff = 'On'
         
         # check if values are out of range
@@ -151,113 +131,113 @@ def commander():
         thresh_list = Config.options('Threshold')
         trip_count = 0
         for item in thresh_list:
+            thresh_in = Config.get('Threshold', item).split(',')
             
-            thresh_in = Config.get('Threshold',item).split(',')
-            
-                
-            if latestValues[item] > int(thresh_in[1]) or latestValues[item] < int(thresh_in[0]):
+            item_v = latest_values[item]
+            if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
                 trip_count += 1
-                # print(item + ' is out of range at ' + str(latestValues[item]))
         
         if trip_count > 0:
-            commandList[1] = 0
+            command_list[1] = 0
         else:
-            commandList[1] = 1
+            command_list[1] = 1
         
         # check if button has something to say
         # basic on/off 1
         # hard reset 2 (cloud also needs to be able to)
         if (button_status == 1):
-            commandList[0] = not commandList[0]
+            command_list[0] = not command_list[0]
             button_status = 0
             sleep(1)
         
 # # button thread to handle button commands
 def button_interrupt():
+    print('Button Thread')
     
     global button_status
-    button_pin = 'P9_11' #GPIO 30
+    global pin_registry
     count = 0
     
     # init
-    GPIO.setup(button_pin, GPIO.IN)
+    GPIO.setup(pin_registry['button_input'], GPIO.IN)
     
-    # main loop
-    while(1):
+    while True:
         
-        GPIO.wait_for_edge(button_pin, GPIO.RISING)    # wait for initial hit
+        GPIO.wait_for_edge(pin_registry['button_input'], GPIO.RISING)
         
-        while(GPIO.input(button_pin)):
+        # waiting for hit
+        while(GPIO.input(pin_registry['button_input'])):
             count += 1
-            
+        
+        # debounce, determine hit or hold
         if count > 50000:
             button_status = 2
         elif count > 1500:
             button_status = 1
             
         count = 0
+        
         sleep(1)
 
 # # this thread handles dumb basic logging
 def logger():
     print('Logging Thread')
-    global latestValues
+    
+    global pin_registry
+    global latest_values
     global onoff
     
-    #logging init
+    # logging init
     if not isfile('data.log'):
-        logging.basicConfig(filename='data.log',level=logging.INFO, format='%(message)s')
+        logging.basicConfig(filename='data.log', level=logging.INFO, format='%(message)s')
         newHeader = 'Time'
-        for variable in latestValues:
+        for variable in latest_values:
             newHeader += ', ' + variable
         logging.info(newHeader)
     else:
-        logging.basicConfig(filename='data.log',level=logging.INFO, format='%(message)s')
+        logging.basicConfig(filename='data.log', level=logging.INFO, format='%(message)s')
         
-    #lcd init
-    lcd_rs        = 'P8_8'
-    lcd_en        = 'P8_10'
-    lcd_d4        = 'P8_18'
-    lcd_d5        = 'P8_16'
-    lcd_d6        = 'P8_14'
-    lcd_d7        = 'P8_12'
-    lcd_backlight = 'P8_7'
-    
+    # lcd init
     lcd_columns = 16
-    lcd_rows    = 2 
+    lcd_rows = 2 
     slide = 2
     
-    lcd = LCD.Adafruit_CharLCD(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, 
-                           lcd_columns, lcd_rows, lcd_backlight)
-                           
-    # temp/humidity sensor
-    temp_pin = 'P9_12' # GPIO_60
-    
-        
+    lcd = LCD.Adafruit_CharLCD(
+        pin_registry['lcd_rs'],
+        pin_registry['lcd_en'], 
+        pin_registry['lcd_d4'], 
+        pin_registry['lcd_d5'], 
+        pin_registry['lcd_d6'], 
+        pin_registry['lcd_d7'], 
+        lcd_columns,
+        lcd_rows, 
+        pin_registry['lcd_backlight']
+    )
+                                
     print('Logging Thread Initialized')
     
-    # main loop
-    while(1):
+    while True:
         # get temp
-        humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, temp_pin)
+        humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
         temp = 9.0/5.0 * temp + 32
-        latestValues['temp'] = temp
-        latestValues['humidity'] = humidity
+        latest_values['temp'] = temp
+        latest_values['humidity'] = humidity
         
         # 'Temp={0:0.1f}*C  Humidity={1:0.1f}%'.format(temperature, humidity)
         
-        #create logs
+        # create logs
         newLog = str(datetime.today())
-        for variable, value in latestValues.iteritems():
+        for variable, value in latest_values.iteritems():
             newLog += ', ' + str(value)
-        logging.info(newLog);
+        logging.info(newLog)
         
+        # update lcd
         lcd.clear()
         if slide == 1:
             lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nStatus: ' + onoff)
             slide += 1
         elif slide == 2:
-            lcd.message('Bat Volt:' + str(latestValues['battery']) + '\nStatus: ' + onoff)
+            lcd.message('Bat Volt:' + str(latest_values['battery']) + '\nStatus: ' + onoff)
             slide = 1
         
         sleep(15)
@@ -266,11 +246,11 @@ def logger():
 def cloud_logger():
     print('Cloud Thread')
     
-    global latestValues
-    global commandList
+    global latest_values
+    global command_list
     global onoff
     
-    #cloud init
+    # cloud init
     try:
         gc = gspread.login(Config.get('SmartRelay','email'), Config.get('SmartRelay','psww'))
         wkb = gc.open_by_url(Config.get('SmartRelay','sheet URL'))
@@ -284,60 +264,60 @@ def cloud_logger():
     
     print('Cloud Thread Initialized')
     
-    #main loop
-    while(1):
-        
-        #create logs
+    while True:
+        # create logs
         newLog = str(datetime.today())
-        for variable, value in latestValues.iteritems():
+        for variable, value in latest_values.iteritems():
             newLog += ', ' + str(value)
         
         logs.append_row(newLog.split(', '))
         
-        #update cloud config page
+        # update cloud config page
         cofig.update_acell('B1', onoff)
         cofig.update_acell('B3', datetime.today())
         
-        #check for command
-        if(cofig.acell('B2').value == 'Off'): commandList[2] = 0
-        else: commandList[2] = 1
+        # check for command
+        if(cofig.acell('B2').value == 'Off'): 
+            command_list[2] = 0
+        else: 
+            command_list[2] = 1
         
         sleep(15)
         
 def debug():
     print('Debugging')
-    global commandList
+    
+    global command_list
     global onoff
     global button_status
-    global latestValues
+    global latest_values
     
     num = 0
     
     sleep(15)
     
-    while(1):
+    while True:
         print(onoff)
         print(num)
         num += 1
-        print(commandList)
-        # print('Humidity is at ' + str(latestValues['humidity']))
+        print(command_list)
+        # print('Humidity is at ' + str(latest_values['humidity']))
         sleep(5)
+
 
 print('Initialized')
 
 
 # start threads
-# thread.start_new_thread(logger, ( ))
-# thread.start_new_thread(cloud_logger, ( ))
-# thread.start_new_thread(button_interrupt, ( ))
-# thread.start_new_thread(commander, ( ))
-# thread.start_new_thread(debug, ( ))
-thread.start_new_thread(value_update, ( ))
+thread.start_new_thread(logger, ())
+thread.start_new_thread(cloud_logger, ())
+thread.start_new_thread(button_interrupt, ())
+thread.start_new_thread(commander, ())
+thread.start_new_thread(debug, ())
+thread.start_new_thread(value_update, ())
 
 print('Threads Started')
-
 
 raw_input("Press Enter to kill program\n")
 PWM.cleanup()
 print('Done')
-
