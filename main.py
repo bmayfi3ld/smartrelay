@@ -8,6 +8,7 @@ import gspread                          # allows access to Google spreadsheets
 import Adafruit_BBIO.ADC as ADC         # ADC control
 import Adafruit_BBIO.GPIO as GPIO       # GPIO control
 from time import sleep                  # pausing
+import time                             # timing
 from datetime import datetime           # timestamp
 import thread                           # multithreading
 import threading
@@ -36,42 +37,46 @@ Config.read("config.ini")
 # # the logger just takes the values and updates the global variables
 def value_update():
     print('Value Update Thread')
+    
     global latestValues
+    frequency_pin = "P9_15" # GPIO_48
     
     #I/O init
     ADC.setup()
-    
-    # ADC init
-    # # give adc power
-    adc_power = 'P9_24' # GPIO_15
-    GPIO.setup(adc_power, GPIO.OUT)
-    GPIO.output(adc_power, GPIO.HIGH)
-    sleep(1)
-    
-    # # start clock for adc
-    PWM.cleanup()
-    PWM.start("P9_14",50, 4096000, 1) # GPIO_40 4096000
-    sleep(1)
+    GPIO.setup(frequency_pin, GPIO.IN)
     
     
-    # dready = 'P9_41'
-    # GPIO.setup(dready, GPIO.IN) # GPIO_20
+    # # ADC init
+    # # # give adc power
+    # adc_power = 'P9_24' # GPIO_15
+    # GPIO.setup(adc_power, GPIO.OUT)
+    # GPIO.output(adc_power, GPIO.HIGH)
+    # sleep(1)
+    
+    # # # start clock for adc
+    # PWM.cleanup()
+    # PWM.start("P9_14",50, 4096000, 1) # GPIO_40 4096000
+    # sleep(1)
+    
+    
+    # # dready = 'P9_41'
+    # # GPIO.setup(dready, GPIO.IN) # GPIO_20
 
-    # SPI init
-    spi = SPI(0,0)
-    spi.msh = 4000000 # 4 Mhz
-    spi.mode = 3
-    spi.bpw = 8
-    sleep(1)
+    # # SPI init
+    # spi = SPI(0,0)
+    # spi.msh = 4000000 # 4 Mhz
+    # spi.mode = 3
+    # spi.bpw = 8
+    # sleep(1)
     
-    # wait for boot
-    trigger = True
-    while(trigger):
-        value = spi.xfer2([0b01001100, 0xff])        # get value
-        print(value)
-        sleep(1)
-        trigger = bin(value[0])[-1:]       # check last bit
-        sleep(1)
+    # # wait for boot
+    # trigger = True
+    # while(trigger):
+    #     value = spi.xfer2([0b01001100, 0xff])        # get value
+    #     print(value)
+    #     sleep(1)
+    #     trigger = bin(value[0])[-1:]       # check last bit
+    #     sleep(1)
         
 
     
@@ -90,10 +95,28 @@ def value_update():
     #     # sleep(1)
     
     # running average of the last 10 periods to get accurate frequency
+    
+    correct = 50
+    attempts = 1
+    deviation_total = 0
     while(1) :
-        # start a loop that will run once per period
-        # checked by finding max/min of voltage
+        # get battery voltage
         latestValues['battery'] = ADC.read("AIN1") * 1.8 * 10
+        
+        
+
+        # frequency measure 
+        cycles = 50
+        start = time.time()
+        for i in range(cycles):
+            GPIO.wait_for_edge(frequency_pin, GPIO.FALLING)
+        duration = time.time() - start
+        value = cycles / duration
+        print(value)
+        deviation_total += abs(value - correct)
+        deviation = deviation_total / attempts
+        print(deviation)
+        attempts += 1
         sleep(1)
         
     
