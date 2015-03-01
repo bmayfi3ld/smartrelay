@@ -11,6 +11,7 @@ echo 'Adding Network'
 
 /usr/sbin/service ntp stop
 /usr/sbin/ntpdate now.okstate.edu
+sleep 15
 /usr/sbin/service ntp start
 
 echo 'Starting Main Thread'
