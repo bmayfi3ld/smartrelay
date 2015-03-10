@@ -1,3 +1,17 @@
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
 <script>
+$(document).ready(function(){
 
+    $(".btn").click(function(){
+        $(this).text("Request Sent");
+        google.script.run.withSuccessHandler(toggle).requestToggle();
+    });
+    
+});
+
+function toggle(status) {
+  if(status) {
+    $(".btn").text("Win");
+  }
+}
 </script>
