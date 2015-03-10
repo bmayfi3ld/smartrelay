@@ -16,3 +16,9 @@ sudo python setup.py install
 cd ..
 git clone https://github.com/supernova2468/smartrelay.git
 cd smartrelay
+cd frequencymodule
+wget https://raw.githubusercontent.com/adafruit/adafruit-beaglebone-io-python/master/source/common.c
+wget https://raw.githubusercontent.com/adafruit/adafruit-beaglebone-io-python/master/source/common.h
+wget https://raw.githubusercontent.com/adafruit/adafruit-beaglebone-io-python/master/source/event_gpio.h
+wget https://raw.githubusercontent.com/adafruit/adafruit-beaglebone-io-python/master/source/event_gpio.c
+python setup.py install
