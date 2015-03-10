@@ -5,6 +5,7 @@
 #include "common.h"
 #include "event_gpio.h"
 #include "time.h"
+#include <sched.h>
 
 
 #define RISING_EDGE  1
@@ -12,12 +13,18 @@
 static PyObject* read_frequency_calc(PyObject* self, PyObject *args)
 {
     clock_t start, finish;
-    double duration;
+    float duration, frequency;
     unsigned int gpio;
     int cycles, result;
     char *channel;
     char error[30];
-    int x = 0; 
+    int x = 0;
+    
+    struct sched_param sched;
+    memset(&sched, 0, sizeof(sched));
+    // Use FIFO scheduler with highest priority for the lowest chance of the kernel context switching.
+    sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    sched_setscheduler(0, SCHED_FIFO, &sched);
 
     if (!PyArg_ParseTuple(args, "si", &channel, &cycles))
         return NULL;
@@ -38,17 +45,21 @@ static PyObject* read_frequency_calc(PyObject* self, PyObject *args)
     start=clock();
     while (x < cycles) {
         result = blocking_wait_for_edge(gpio, RISING_EDGE);
-        x++;   
+        x = x + 1;   
     }
     sleep(1);
     finish=clock();
     
     Py_END_ALLOW_THREADS   // enable GIL
 
-    duration=(float)(finish -start)/CLOCKS_PER_SEC;
+    duration=(float)(finish - start)/CLOCKS_PER_SEC;
+    
+    duration = (duration-1) * 2;
+    
+    frequency = (float)(cycles/duration);
     
     if (result == 0) {
-        return Py_BuildValue("f", duration);
+        return Py_BuildValue("d", frequency);
     } else if (result == 2) {
         PyErr_SetString(PyExc_RuntimeError, "Edge detection events already enabled for this GPIO channel");
         return NULL;
@@ -58,7 +69,7 @@ static PyObject* read_frequency_calc(PyObject* self, PyObject *args)
         return NULL;
     }
    
-    return Py_BuildValue("f", start);
+    return Py_BuildValue("s", 'what?');
 }
 
 static PyMethodDef read_frequency_funcs[] = {
