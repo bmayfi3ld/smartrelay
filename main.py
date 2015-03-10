@@ -16,7 +16,7 @@ from os.path import isfile              # checking for existing files
 import Adafruit_CharLCD as LCD          # lcd driver
 import Adafruit_DHT                     # temp and humidity sensor driver
 import Adafruit_BBIO.PWM as PWM         # PWM
-from Adafruit_BBIO.SPI import SPI       # SPI
+from frequency_module import read_frequency # frequency read
 
 print('Starting Up')
 
