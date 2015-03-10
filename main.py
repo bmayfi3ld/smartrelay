@@ -33,15 +33,15 @@ latest_values = {
 onoff = 'Off'                   # relay on or off
 button_status = 0               # 1 = command toggle, 2 = reset all
 pin_registry = {
-    'relay_output'      : 'P9_42',
-    'frequency_input'   : 'P9_15',
+    'relay_output'      : 'P9_14',
+    'frequency_input'   : 'P9_42',
     'button_input'      : 'P9_11',
-    'lcd_rs'            : 'P8_8',
-    'lcd_en'            : 'P8_10',
-    'lcd_d4'            : 'P8_18',
-    'lcd_d5'            : 'P8_16',
-    'lcd_d6'            : 'P8_14',
-    'lcd_d7'            : 'P8_12',
+    'lcd_rs'            : 'P8_7',
+    'lcd_en'            : 'P8_9',
+    'lcd_d4'            : 'P8_17',
+    'lcd_d5'            : 'P8_15',
+    'lcd_d6'            : 'P8_13',
+    'lcd_d7'            : 'P8_11',
     'lcd_backlight'     : 'P8_7',
     'temp_input'        : 'P9_12',
     'voltage_ain'       : 'P9_39',
@@ -79,17 +79,12 @@ def value_update():
         latest_values['battery'] = ADC.read(pin_registry['battery_ain']) * 1.8 * 10
         
         # frequency measure
-        start = time.time()
-        # for i in range(cycles):
-            # GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.FALLING)
-        duration = time.time() - start
-        value = cycles / duration
-        # print(value)
-        latest_values['frequency'] = value
-        # deviation_total += abs(value - correct)
-        # deviation = deviation_total / attempts
-        # print(deviation)
-        # attempts += 1
+        value = read_frequency(pin_registry['frequency_input'], 3)
+        value = round(value, 2)
+        print(value)
+        
+        # latest_values['frequency'] = value
+
         
         # peak measure
         voltage = 0
@@ -98,7 +93,7 @@ def value_update():
             if value > voltage:
                 voltage = value
         latest_values['voltage'] = voltage
-        print(voltage)
+        # print(voltage)
         
         sleep(1)
         
@@ -203,7 +198,7 @@ def logger():
     lcd_columns = 16
     lcd_rows = 2 
     slide = 2
-    
+    global lcd
     lcd = LCD.Adafruit_CharLCD(
         pin_registry['lcd_rs'],
         pin_registry['lcd_en'], 
@@ -220,7 +215,9 @@ def logger():
     
     while True:
         # get temp
-        humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
+        humidity = 0;
+        temp = 0;
+        # humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
         temp = 9.0/5.0 * temp + 32
         latest_values['temp'] = temp
         latest_values['humidity'] = humidity
@@ -311,10 +308,10 @@ print('Initialized')
 
 
 # start threads
-# thread.start_new_thread(logger, ())
-# thread.start_new_thread(cloud_logger, ())
-# thread.start_new_thread(button_interrupt, ())
-# thread.start_new_thread(commander, ())
+thread.start_new_thread(logger, ())
+thread.start_new_thread(cloud_logger, ())
+thread.start_new_thread(button_interrupt, ())
+thread.start_new_thread(commander, ())
 # thread.start_new_thread(debug, ())
 thread.start_new_thread(value_update, ())
 
@@ -322,4 +319,5 @@ print('Threads Started')
 
 raw_input("Press Enter to kill program\n")
 PWM.cleanup()
+lcd.clear()
 print('Done')
