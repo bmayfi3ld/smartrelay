@@ -6,17 +6,15 @@ import gspread                          # allows access to Google spreadsheets
 import Adafruit_BBIO.ADC as ADC         # ADC control
 import Adafruit_BBIO.GPIO as GPIO       # GPIO control
 from time import sleep                  # pausing
-import time                             # timing
+from time import time                   # timing
 from datetime import datetime           # timestamp
 import thread                           # multithreading
-import threading
 import ConfigParser                     # read config file
 import logging                          # for basic local logging
 from os.path import isfile              # checking for existing files
 import Adafruit_CharLCD as LCD          # lcd driver
 import Adafruit_DHT                     # temp and humidity sensor driver
 import Adafruit_BBIO.PWM as PWM         # PWM
-from frequency_module import read_frequency # frequency read
 
 print('Starting Up')
 
@@ -36,12 +34,12 @@ pin_registry = {
     'relay_output'      : 'P9_14',
     'frequency_input'   : 'P9_42',
     'button_input'      : 'P9_11',
-    'lcd_rs'            : 'P8_7',
-    'lcd_en'            : 'P8_9',
-    'lcd_d4'            : 'P8_17',
-    'lcd_d5'            : 'P8_15',
-    'lcd_d6'            : 'P8_13',
-    'lcd_d7'            : 'P8_11',
+    'lcd_rs'            : 'P8_17',
+    'lcd_en'            : 'P8_15',
+    'lcd_d4'            : 'P8_13',
+    'lcd_d5'            : 'P8_11',
+    'lcd_d6'            : 'P8_9',
+    'lcd_d7'            : 'P8_7',
     'lcd_backlight'     : 'P8_7',
     'temp_input'        : 'P9_12',
     'voltage_ain'       : 'P9_39',
@@ -66,11 +64,8 @@ def value_update():
     ADC.setup()
     GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
     
-    # sd calc init
-    correct = 50
-    attempts = 1
-    deviation_total = 0
-    cycles = 50
+    # frequency vars
+    time_to_measure = 10 # in seconds
     
     print('Value Update Initialized')
     
@@ -79,12 +74,13 @@ def value_update():
         latest_values['battery'] = ADC.read(pin_registry['battery_ain']) * 1.8 * 10
         
         # frequency measure
-        value = read_frequency(pin_registry['frequency_input'], 3)
-        value = round(value, 2)
-        print(value)
-        
-        # latest_values['frequency'] = value
-
+        count = 0
+        end = time() + timer
+        while end > time():
+            GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
+            count += 1
+        value = count/float(timer)
+        latest_values['frequency'] = value
         
         # peak measure
         voltage = 0
