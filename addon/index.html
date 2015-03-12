@@ -1,5 +1,15 @@
-<?!= include('css'); ?>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<?!= include('css'); //<div id="loadingmask"></div>?>
+<link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons.css">
+
 <main>
-  <a class='btn' href=#>On</a>
+  <h1>Instruction Sent to Device</h1>
+  <button id='btn' href=#>Loading Status</button>
+  <h1>Device Status</h1>
+  <h2 id='status'> Loading </h2>
+  <button id='refresh'>Refresh</button>
+  <div id="linechart_material"></div>
 </main>
+
 <?!= include('js'); ?>
