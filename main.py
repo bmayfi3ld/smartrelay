@@ -11,6 +11,7 @@ from datetime import datetime           # timestamp
 import thread                           # multithreading
 import ConfigParser                     # read config file
 import logging                          # for basic local logging
+import logging.handlers                 # to remove file once size is exceeded
 from os.path import isfile              # checking for existing files
 import Adafruit_CharLCD as LCD          # lcd driver
 import Adafruit_DHT                     # temp and humidity sensor driver
@@ -186,15 +187,27 @@ def logger():
     global onoff
     
     # logging init
-    if not isfile('data.log'):
-        logging.basicConfig(filename='data.log', level=logging.INFO, format='%(message)s')
-        newHeader = 'Time'
-        for variable in latest_values:
-            newHeader += ', ' + variable
-        logging.info(newHeader)
-    else:
-        logging.basicConfig(filename='data.log', level=logging.INFO, format='%(message)s')
+    # file_name = 'data.log'
+    # if not isfile(file_name):
+    #     logging.basicConfig(filename=file_name, level=logging.INFO, format='%(message)s')
+    #     newHeader = 'Time'
+    #     for variable in latest_values:
+    #         newHeader += ', ' + variable
+    #     logging.info(newHeader)
+    # else:
+    #     logging.basicConfig(filename=file_name, level=logging.INFO, format='%(message)s')
         
+    LOG_FILENAME = 'data.log'
+    # Set up a specific logger with our desired output level
+    my_logger = logging.getLogger('MyLogger')
+    my_logger.setLevel(logging.DEBUG)
+    
+    # Add the log message handler to the logger
+    handler = logging.handlers.RotatingFileHandler(
+                  LOG_FILENAME, maxBytes=20, backupCount=5)
+    
+    my_logger.addHandler(handler)
+    
     # lcd init
     lcd_columns = 16
     lcd_rows = 2 
@@ -235,7 +248,7 @@ def logger():
         newLog = str(datetime.today())
         for variable, value in latest_values.iteritems():
             newLog += ', ' + str(value)
-        logging.info(newLog)
+        my_logger.info(newLog)
         
         # update lcd
         lcd.clear()
