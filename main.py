@@ -21,8 +21,8 @@ print('Starting Up')
 # global variables
 command_list = [0, 0, 1, 1]     # 4 sources: button, logs, remote, amps
 latest_values = {
-    'voltage'   : 120,
-    'amps'      : 6,
+    'voltage'   : -1,
+    'amps'      : -1,
     'temp'      : -1,
     'battery'   : -1,
     'humidity'  : -1,
@@ -67,6 +67,9 @@ def value_update():
     # frequency vars
     time_to_measure = 10 # in seconds
     
+    # voltage vars
+    cycles = 100
+    
     print('Value Update Initialized')
     
     while True:
@@ -75,7 +78,7 @@ def value_update():
         
         # frequency measure
         count = 0
-        end = time() + timer
+        end = time() + time_to_measure
         while end > time():
             GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
             count += 1
@@ -83,13 +86,15 @@ def value_update():
         latest_values['frequency'] = value
         
         # peak measure
-        voltage = 0
-        for i in range(cycles):
-            value = ADC.read(pin_registry['voltage_ain']) * 1.8
-            if value > voltage:
-                voltage = value
+        voltage_stack = []
+        end = time() + time_to_measure
+        while end > time():
+            voltage_stack.append(ADC.read(pin_registry['voltage_ain']))
+        voltage = round(max(voltage_stack), 4)
         latest_values['voltage'] = voltage
-        # print(voltage)
+        
+        
+        # print('voltage: ' + str(latest_values['voltage']) + ' frequency: ' + str(latest_values['frequency']))
         
         sleep(1)
         
@@ -172,7 +177,7 @@ def button_interrupt():
         
         sleep(1)
 
-# # this thread handles dumb basic logging
+# # this thread handles dumb basic logging, also updates things that won't be changing very quickly
 def logger():
     print('Logging Thread')
     
@@ -211,10 +216,16 @@ def logger():
     
     while True:
         # get temp
-        humidity = 0;
-        temp = 0;
-        # humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
-        temp = 9.0/5.0 * temp + 32
+        humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
+        
+        if humidity == None:
+            humidity = -1;
+        if temp == None:
+            temp = -1;
+        else:
+            temp = 9.0/5.0 * temp + 32
+
+        
         latest_values['temp'] = temp
         latest_values['humidity'] = humidity
         
@@ -296,8 +307,9 @@ def debug():
         print(num)
         num += 1
         print(command_list)
+        print(latest_values)
         # print('Humidity is at ' + str(latest_values['humidity']))
-        sleep(5)
+        sleep(10)
 
 
 print('Initialized')
@@ -308,7 +320,7 @@ thread.start_new_thread(logger, ())
 thread.start_new_thread(cloud_logger, ())
 thread.start_new_thread(button_interrupt, ())
 thread.start_new_thread(commander, ())
-# thread.start_new_thread(debug, ())
+thread.start_new_thread(debug, ())
 thread.start_new_thread(value_update, ())
 
 print('Threads Started')
