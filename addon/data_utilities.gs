@@ -3,24 +3,26 @@ function onOpen() {
   //SpreadsheetApp.getUi().createAddonMenu().addItem('Open', 'openMenu').addToUi();
   SpreadsheetApp.getActiveSpreadsheet().toast('Smart Relay is installed on this spreadsheet');
   //create pages if they don't exist
-  var cexists,lexists, eexists;
+  var cexists,lexists, eexists, hexists;
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var ssArr = ss.getSheets();
   for(var i = 0; i < ssArr.length; i++ ) {
     if(ssArr[i].getName() == 'config') cexists = true;
     if(ssArr[i].getName() == 'logs') lexists = true;
     if(ssArr[i].getName() == 'errorLog') eexists = true;
+    if(ssArr[i].getName() == 'charts') hexists = true;
   }
   if(!cexists) ss.insertSheet('config');
   if(!lexists) ss.insertSheet('logs');
   if(!eexists) ss.insertSheet('errorLog');
+  if(!hexists) ss.insertSheet('charts');
   
 
   
   
   //add useful names to page
-  var configArr = ['Status','Command','Email'];
-    var logArr = ['Timestamp','Battery Voltage','Amps','Voltage','Temperature', 'Humidity'];
+  var configArr = ['Status','Command','Last Response Time','Email'];
+  var logArr = ['Timestamp','Voltage','Amps','Temperature','Battery Voltage', 'Humidity', 'Frequency'];
   configArr = configArr.concat(logArr);
   var workingCell = ss.getSheetByName('config').getRange(1, 1);
   for(i = 0; i < configArr.length; i++) {
@@ -37,9 +39,11 @@ function onOpen() {
   }
   
   //Create Charts (Voltage, Amps)
+  //myChartBuilder('Voltage');
   
   
   //clean up logs page
+  //TODO: get data range and delete excess rows
   workingSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('logs');
   var end = workingSheet.getLastRow()
   for(i = end; i >= 2; i--) {
@@ -68,6 +72,8 @@ function onEdit(e){
     debug(value + ':' + variable);
     threshCheck(value,variable);
   }
+  
+  //Update Charts
 }
 
 //Email Alert
@@ -117,4 +123,13 @@ function onInstall(e) {
 
 function debug(myIn) {
  Logger.log(myIn); 
+}
+
+function myChartBuilder(variableIN) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('charts');
+   var chartBuilder = sheet.newChart();
+  chartBuilder.addRange(sheet.getRange("A1:D8"))
+       .setChartType(Charts.ChartType.LINE)
+       .setOption('title', variableIN);
+   sheet.insertChart(chartBuilder.setPosition(3, 3, 3, 3).build());
 }

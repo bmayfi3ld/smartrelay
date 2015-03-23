@@ -1,17 +1,61 @@
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script>
+
+google.load('visualization', '1.1', {packages: ['line']});
+
 $(document).ready(function(){
 
-    $(".btn").click(function(){
+    $("#btn").click(function(){
         $(this).text("Request Sent");
         google.script.run.withSuccessHandler(toggle).requestToggle();
     });
     
+    $("#refresh").click(function(){
+        $("#status").text("Loading");
+        google.script.run.withSuccessHandler(statusUpdate).getStatus();
+    });
+    
+    
+    google.script.run.withSuccessHandler(toggle).requestToggle();
+    //drawChart()
+    
 });
 
 function toggle(status) {
-  if(status) {
-    $(".btn").text("Win");
-  }
+    $("#btn").text(status);
+    google.script.run.withSuccessHandler(statusUpdate).getStatus();
 }
+
+function statusUpdate(status) {
+    $("#status").text(status);
+    google.script.run.withSuccessHandler(drawChart).getData();
+}
+
+function drawChart(arrayIN) {
+
+      var data = new google.visualization.DataTable();
+      data.addColumn('string', 'Time');
+      data.addColumn('number', 'Voltage');
+      data.addColumn('number', 'Amps');
+      data.addColumn('number', 'Temperature');
+      data.addColumn('number', 'Battery Voltage');
+      data.addColumn('number', 'Humidity');
+      data.addColumn('number', 'Frequency');
+
+      data.addRows(arrayIN);
+
+      var options = {
+        chart: {
+          title: 'Logger Data',
+          subtitle: 'from Beaglebone'
+        },
+        width: 900,
+        height: 500
+      };
+
+      var chart = new google.charts.Line(document.getElementById('linechart_material'));
+
+      chart.draw(data, options);
+    }
 </script>
