@@ -310,24 +310,30 @@ def cloud_logger():
     print('Cloud Thread Initialized')
     
     while True:
-        # create logs
-        newLog = str(datetime.today())
-        for variable, value in latest_values.iteritems():
-            newLog += ', ' + str(value)
-        print(newLog)
-        logs.append_row(newLog.split(', '))
-        
-        # update cloud config page
-        cofig.update_acell('B1', onoff)
-        cofig.update_acell('B3', datetime.today())
-        
-        # check for command
-        if(cofig.acell('B2').value == 'Off'): 
-            command_list[2] = 0
-        else: 
-            command_list[2] = 1
-        
-        sleep(15)
+        try:
+            # create logs
+            newLog = str(datetime.today())
+            for variable, value in latest_values.iteritems():
+                newLog += ', ' + str(value)
+            # print(newLog)
+            logs.append_row(newLog.split(', '))
+            
+            # update cloud config page
+            cofig.update_acell('B1', onoff)
+            cofig.update_acell('B3', datetime.today())
+            
+            # check for command
+            if(cofig.acell('B2').value == 'Off'): 
+                command_list[2] = 0
+            else: 
+                command_list[2] = 1
+            
+            sleep(15)
+        except:
+            print('Cloud Thread Failed')
+            sleep(30)
+            cloud_logger()
+            return
         
 def debug():
     print('Debugging')
