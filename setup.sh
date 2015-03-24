@@ -1,5 +1,7 @@
 sudo apt-get update
-sudo apt-get install build-essential python-dev python-setuptools python-pip python-smbus ntpdate -y
+sudo apt-get install build-essential python-dev python-setuptools python-pip python-smbus ntp -y
+sudo rm /etc/localtime
+sudo ln -s /usr/share/zoneinfo/US/Central /etc/localtime
 wget -c https://raw.github.com/RobertCNelson/tools/master/pkgs/dtc.sh
 chmod +x dtc.sh
 ./dtc.sh
