@@ -33,8 +33,12 @@ onoff = 'Off'                   # relay on or off
 button_status = 0               # 1 = command toggle, 2 = reset all
 pin_registry = {
     'relay_output'      : 'P9_14',
+    'relay_secondary'   : 'P9_12',
+    'led1'              : 'P9_16',
+    'led2'              : 'P8_19',
     'frequency_input'   : 'P9_42',
-    'button_input'      : 'P9_11',
+    'button_input'      : 'P9_24',
+    'button_secondary'  : 'P9_26',
     'lcd_rs'            : 'P8_17',
     'lcd_en'            : 'P8_15',
     'lcd_d4'            : 'P8_13',
@@ -42,9 +46,10 @@ pin_registry = {
     'lcd_d6'            : 'P8_9',
     'lcd_d7'            : 'P8_7',
     'lcd_backlight'     : 'P8_7',
-    'temp_input'        : 'P9_12',
-    'voltage_ain'       : 'P9_39',
-    'battery_ain'       : 'P9_40'
+    'temp_input'        : 'P9_22',
+    'voltage_ain'       : 'P9_38',
+    'battery_ain'       : 'P9_40',
+    'current_ain'       : 'P9_36'
 }
 
 
@@ -75,7 +80,11 @@ def value_update():
     
     while True:
         # get battery voltage
-        latest_values['battery'] = ADC.read(pin_registry['battery_ain']) * 1.8 * 10
+        value = ADC.read(pin_registry['battery_ain']) * 1.8 * 10
+        # if value == 15.450000286102295:
+        #     value = -1
+        value = latest_values['battery']
+        
         
         # frequency measure
         count = 0
@@ -86,13 +95,21 @@ def value_update():
         value = count/float(timer)
         latest_values['frequency'] = value
         
-        # peak measure
+        # voltage measure
         voltage_stack = []
         end = time() + time_to_measure
         while end > time():
             voltage_stack.append(ADC.read(pin_registry['voltage_ain']))
         voltage = round(max(voltage_stack), 4)
         latest_values['voltage'] = voltage
+        
+        # amps measure
+        current_stack = []
+        end = time() + time_to_measure
+        while end > time():
+            current_stack.append(ADC.read(pin_registry['current_ain']))
+        value = round(max(voltage_stack), 4)
+        latest_values['amps'] = value
         
         
         # print('voltage: ' + str(latest_values['voltage']) + ' frequency: ' + str(latest_values['frequency']))
@@ -186,17 +203,7 @@ def logger():
     global latest_values
     global onoff
     
-    # logging init
-    # file_name = 'data.log'
-    # if not isfile(file_name):
-    #     logging.basicConfig(filename=file_name, level=logging.INFO, format='%(message)s')
-    #     newHeader = 'Time'
-    #     for variable in latest_values:
-    #         newHeader += ', ' + variable
-    #     logging.info(newHeader)
-    # else:
-    #     logging.basicConfig(filename=file_name, level=logging.INFO, format='%(message)s')
-        
+    # log init    
     LOG_FILENAME = 'data.log'
     # Set up a specific logger with our desired output level
     my_logger = logging.getLogger('MyLogger')
@@ -204,7 +211,7 @@ def logger():
     
     # Add the log message handler to the logger
     handler = logging.handlers.RotatingFileHandler(
-                  LOG_FILENAME, maxBytes=20, backupCount=5)
+                  LOG_FILENAME, maxBytes=250000000, backupCount=3)
     
     my_logger.addHandler(handler)
     
@@ -224,7 +231,15 @@ def logger():
         lcd_rows, 
         pin_registry['lcd_backlight']
     )
-                                
+    
+    # I/O init
+    GPIO.setup(pin_registry['led1'], GPIO.OUT)
+    GPIO.setup(pin_registry['led2'], GPIO.OUT)
+    GPIO.setup(pin_registry['button_secondary'], GPIO.IN)
+    
+    GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
+    GPIO.setup(pin_registry['relay_secondary'], GPIO.OUT)
+    
     print('Logging Thread Initialized')
     
     while True:
@@ -258,6 +273,17 @@ def logger():
         elif slide == 2:
             lcd.message('Bat Volt:' + str(latest_values['battery']) + '\nStatus: ' + onoff)
             slide = 1
+            
+        # update leds
+        GPIO.output(pin_registry['led1'], GPIO.HIGH)
+        GPIO.output(pin_registry['led2'], GPIO.HIGH)
+        GPIO.output(pin_registry['relay_output'], GPIO.HIGH)
+        GPIO.output(pin_registry['relay_secondary'], GPIO.HIGH)
+        sleep(5)
+        GPIO.output(pin_registry['led1'], GPIO.LOW)
+        GPIO.output(pin_registry['led2'], GPIO.LOW)
+        GPIO.output(pin_registry['relay_output'], GPIO.LOW)
+        GPIO.output(pin_registry['relay_secondary'], GPIO.LOW)
         
         sleep(15)
         
@@ -288,7 +314,7 @@ def cloud_logger():
         newLog = str(datetime.today())
         for variable, value in latest_values.iteritems():
             newLog += ', ' + str(value)
-        
+        print(newLog)
         logs.append_row(newLog.split(', '))
         
         # update cloud config page
@@ -333,7 +359,7 @@ thread.start_new_thread(logger, ())
 thread.start_new_thread(cloud_logger, ())
 thread.start_new_thread(button_interrupt, ())
 thread.start_new_thread(commander, ())
-thread.start_new_thread(debug, ())
+# thread.start_new_thread(debug, ())
 thread.start_new_thread(value_update, ())
 
 print('Threads Started')
