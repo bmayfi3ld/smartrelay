@@ -34,28 +34,50 @@ function statusUpdate(status) {
 
 function drawChart(arrayIN) {
 
-      var data = new google.visualization.DataTable();
-      data.addColumn('string', 'Time');
-      data.addColumn('number', 'Voltage');
-      data.addColumn('number', 'Amps');
-      data.addColumn('number', 'Temperature');
-      data.addColumn('number', 'Battery Voltage');
-      data.addColumn('number', 'Humidity');
-      data.addColumn('number', 'Frequency');
+      var dataArr = [];
+      // create all graphs
+      for(var i = 0; i < arrayIN[0].length-1; i++) {
+        dataArr[i] = new google.visualization.DataTable();
+      }
+      
+      // convert back to date
+      for(var i = 1; i < arrayIN.length; i++) {
+        arrayIN[i][0] = new Date(arrayIN[i][0])
+        
+      }
+      
+      // add date to all graphs
+      for(var i = 0; i < arrayIN[0].length-1; i++) {
+        dataArr[i].addColumn('datetime', 'Time');
+      }
+      
+      // create individual graph legends and add data
+      for(var i = 0; i < arrayIN[0].length-1; i++) {
+        dataArr[i].addColumn('number', arrayIN[0][i+1]);
+        
+        for(var j = 1; j < arrayIN.length; j++) {
+          dataArr[i].addRow([arrayIN[j][0],arrayIN[j][i+1]])
+        }
+      }
 
-      data.addRows(arrayIN);
 
-      var options = {
-        chart: {
-          title: 'Logger Data',
-          subtitle: 'from Beaglebone'
-        },
-        width: 900,
-        height: 500
+      
+
+
+
+      // add all charts
+      for(var i = 0; i < arrayIN[0].length-1; i++) {
+        var options = {
+          chart: {
+            title: arrayIN[0][i+1]
+          },
+          width: 900,
+          height: 500,
+          legend: {position: 'none'}
       };
-
-      var chart = new google.charts.Line(document.getElementById('linechart_material'));
-
-      chart.draw(data, options);
+        var chart = new google.charts.Line(document.getElementById('chart' + i));
+        chart.draw(dataArr[i], options);
+      }
+      
     }
 </script>
