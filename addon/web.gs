@@ -46,13 +46,17 @@ function getStatus() {
 
 function getData() {
   var sheet = SpreadsheetApp.openByUrl(Url).getSheetByName('logs');
-  var cell = sheet.getRange(2, 1, sheet.getLastRow()-1, 7);
+  var cell = sheet.getRange(1, 1, sheet.getLastRow()-1, 7);
   range = cell.getValues();
-//  for (i in values) {
-//    values[i][0] = values[i][0].toString()
-//  }
-  return range.map(function (row) { return [row[0].toString(), row[1], row[2], row[3], row[4], row[5], row[6]]; } );  
-  Logger.log(cell.getValues())
-  return cell.getValues();
+  
+  // converting to string for transfer to webpage
+  for (var i = 1; i < range.length; i++) {
+    range[i][0] = range[i][0].toString()
+  }
+  return range
+  
+//  return range.map(function (row) { return [row[0].toString(), row[1], row[2], row[3], row[4], row[5], row[6]]; } );  
+//  Logger.log(cell.getValues())
+//  return cell.getValues();
 }
 
