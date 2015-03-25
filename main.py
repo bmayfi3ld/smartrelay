@@ -70,19 +70,16 @@ def value_update():
     ADC.setup()
     GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
     
-    # frequency vars
-    time_to_measure = 10 # in seconds
+    # timer
+    time_to_measure = 5 # in seconds
     
-    # voltage vars
-    cycles = 100
     
     print('Value Update Initialized')
     
     while True:
         # get battery voltage
-        value = ADC.read(pin_registry['battery_ain']) * 1.8 * 10
-        # if value == 15.450000286102295:
-        #     value = -1
+        value = ADC.read(pin_registry['battery_ain'])
+        # * 1.8 * 10
         value = latest_values['battery']
         
         
@@ -92,7 +89,7 @@ def value_update():
         while end > time():
             GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
             count += 1
-        value = count/float(timer)
+        value = count/float(time_to_measure)
         latest_values['frequency'] = value
         
         # voltage measure
@@ -100,19 +97,17 @@ def value_update():
         end = time() + time_to_measure
         while end > time():
             voltage_stack.append(ADC.read(pin_registry['voltage_ain']))
-        voltage = round(max(voltage_stack), 4)
-        latest_values['voltage'] = voltage
+        value = round(max(voltage_stack), 4) # need adjustment
+        latest_values['voltage'] = value
         
         # amps measure
         current_stack = []
         end = time() + time_to_measure
         while end > time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
-        value = round(max(voltage_stack), 4)
+        value = round(max(voltage_stack), 4) # need adjustment
         latest_values['amps'] = value
         
-        
-        # print('voltage: ' + str(latest_values['voltage']) + ' frequency: ' + str(latest_values['frequency']))
         
         sleep(1)
         
