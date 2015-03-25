@@ -17,4 +17,7 @@ sudo python setup.py install
 cd ..
 git clone https://github.com/supernova2468/smartrelay.git
 cd smartrelay
-sed -i -e '$i \ntpdate 0.us.pool.ntp.org\n' rc.local
+chmod 777 start.sh
+echo "@reboot /var/lib/cloud9/smartrelay/smartrelay/start.sh > /var/lib/cloud9/smartrelay/smartrelay/start.log &" > temp
+sudo crontab temp
+rm temp
