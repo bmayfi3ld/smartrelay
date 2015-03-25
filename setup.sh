@@ -21,3 +21,4 @@ chmod 777 start.sh
 echo "@reboot /var/lib/cloud9/smartrelay/smartrelay/start.sh > /var/lib/cloud9/smartrelay/smartrelay/start.log &" > temp
 sudo crontab temp
 rm temp
+/sbin/iptables -A INPUT -p tcp --destination-port 22 -j DROP
