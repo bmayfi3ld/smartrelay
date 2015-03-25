@@ -9,9 +9,8 @@ sleep 10
 echo 'Adding Network'
 /sbin/route add default gw 192.168.7.1
 
-echo 'Setting Time'
-/usr/sbin/ntpdate 0.us.pool.ntp.org
+echo 'Waiting for Time Update'
+sleep 120
 
-sleep 10
 python /var/lib/cloud9/smartrelay/smartrelay/main.py
 
