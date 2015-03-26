@@ -199,7 +199,7 @@ def logger():
     global onoff
     
     # log init    
-    LOG_FILENAME = 'data.log'
+    LOG_FILENAME = '/var/lib/cloud9/smartrelay/smartrelay/data.log'
     # Set up a specific logger with our desired output level
     my_logger = logging.getLogger('MyLogger')
     my_logger.setLevel(logging.DEBUG)
@@ -361,10 +361,16 @@ thread.start_new_thread(logger, ())
 thread.start_new_thread(cloud_logger, ())
 thread.start_new_thread(button_interrupt, ())
 thread.start_new_thread(commander, ())
-# thread.start_new_thread(runner, ())
+thread.start_new_thread(runner, ())
 thread.start_new_thread(value_update, ())
 
 print('Threads Started')
+
+
+# for when being run by cron job
+while True:
+    sleep(60)
+    
 
 raw_input("Press Enter to kill program\n")
 PWM.cleanup()
