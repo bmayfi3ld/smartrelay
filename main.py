@@ -253,7 +253,6 @@ def logger():
         else:
             temp = 9.0/5.0 * temp + 32
 
-        
         latest_values['temp'] = temp
         latest_values['humidity'] = humidity
         
