@@ -55,7 +55,7 @@ pin_registry = {
 
 # global setup
 Config = ConfigParser.ConfigParser()    # read in config file
-Config.read("config.ini")
+Config.read("/var/lib/cloud9/smartrelay/smartrelay/config.ini")
 
 # define functions (which usually are individual threads)
 
@@ -322,16 +322,17 @@ def cloud_logger():
                 command_list[2] = 0
             else: 
                 command_list[2] = 1
-            
+        
             sleep(15)
+            
         except:
             print('Cloud Thread Failed')
             sleep(30)
             cloud_logger()
             return
         
-def debug():
-    print('Debugging')
+def runner():
+    print('Running')
     
     global command_list
     global onoff
@@ -340,7 +341,7 @@ def debug():
     
     num = 0
     
-    sleep(15)
+    sleep(30)
     
     while True:
         print(onoff)
@@ -360,7 +361,7 @@ thread.start_new_thread(logger, ())
 thread.start_new_thread(cloud_logger, ())
 thread.start_new_thread(button_interrupt, ())
 thread.start_new_thread(commander, ())
-# thread.start_new_thread(debug, ())
+# thread.start_new_thread(runner, ())
 thread.start_new_thread(value_update, ())
 
 print('Threads Started')
