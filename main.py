@@ -19,6 +19,11 @@ import Adafruit_BBIO.PWM as PWM         # PWM
 
 print('Starting Up')
 
+# wait for correct time
+while datetime.today().year < 2015:
+    print('Waiting for Time')
+    sleep(5)
+
 # global variables
 command_list = [0, 0, 1, 1]     # 4 sources: button, logs, remote, amps
 latest_values = {
@@ -318,7 +323,7 @@ def cloud_logger():
             cofig.update_acell('B3', datetime.today())
             
             # check for command
-            if(cofig.acell('B2').value == 'Off'): 
+            if(cofig.acell('B2').value == 'off'): 
                 command_list[2] = 0
             else: 
                 command_list[2] = 1
@@ -327,7 +332,7 @@ def cloud_logger():
             
         except:
             print('Cloud Thread Failed')
-            sleep(30)
+            sleep(60)
             cloud_logger()
             return
         
@@ -341,7 +346,7 @@ def runner():
     
     num = 0
     
-    sleep(30)
+    sleep(120)
     
     while True:
         print(onoff)
