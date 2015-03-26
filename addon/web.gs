@@ -48,11 +48,29 @@ function getData() {
   var sheet = SpreadsheetApp.openByUrl(Url).getSheetByName('logs');
   var cell = sheet.getRange(1, 1, sheet.getLastRow()-1, 7);
   range = cell.getValues();
+  // checking if date is definitly wrong
+  for ( var i = 1; i < range.length; i++ ) {
+    if (typeof range[i][0].getMonth === 'function' && range[i][0].getFullYear() < 2015) {
+      range.splice(i,1)
+    }
+  }
   
-  // converting to string for transfer to webpage
-  for (var i = 1; i < range.length; i++) {
+  // convert to string for transfer to client
+  for ( var i = 1; i < range.length; i++ ) {
     range[i][0] = range[i][0].toString()
   }
+  
+  // check if blank row
+  for (var i = 1; i < range.length; i++) {
+    if (range[i][0] == '') {
+      range.splice(i,1)
+    }
+  }
+ 
+//  for ( var i = 1; i < range.length; i++ ) {
+//    Logger.log(range[i][0])
+//  }
+      
   return range
   
 //  return range.map(function (row) { return [row[0].toString(), row[1], row[2], row[3], row[4], row[5], row[6]]; } );  
