@@ -4,13 +4,23 @@
 
 echo 'Started'
 
-sleep 10
+sleep 30
 
 echo 'Adding Network'
 /sbin/route add default gw 192.168.7.1
 
 echo 'Waiting for Time Update'
-sleep 120
+sleep 30
+echo '25%'
+sleep 30
+echo '50%'
+sleep 30
+echo '75%'
+sleep 30
+echo '100%'
 
-python /var/lib/cloud9/smartrelay/smartrelay/main.py
+echo 'Starting Main Thread'
+python /var/lib/cloud9/smartrelay/smartrelay/main.py > /var/lib/cloud9/smartrelay/smartrelay/python.log &
+
+echo 'Exiting'
 
