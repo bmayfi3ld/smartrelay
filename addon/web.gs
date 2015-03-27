@@ -46,6 +46,7 @@ function getStatus() {
 
 function getData() {
   var sheet = SpreadsheetApp.openByUrl(Url).getSheetByName('logs');
+  
   var cell = sheet.getRange(1, 1, sheet.getLastRow()-1, 7);
   range = cell.getValues();
   // checking if date is definitly wrong
@@ -61,15 +62,22 @@ function getData() {
   }
   
   // check if blank row
+  for (var i = range.length-1; i > 0; i--) {
+    if (range[i][0] == '') {
+      range.splice(i,1)      
+    }
+  }
+  
+  // round temp
   for (var i = 1; i < range.length; i++) {
     if (range[i][0] == '') {
-      range.splice(i,1)
+      range[i][1] = Math.round(range[i][1])
     }
   }
  
-//  for ( var i = 1; i < range.length; i++ ) {
-//    Logger.log(range[i][0])
-//  }
+  for ( var i = 1; i < range.length; i++ ) {
+    Logger.log(range[i][0])
+  }
       
   return range
   
@@ -77,4 +85,3 @@ function getData() {
 //  Logger.log(cell.getValues())
 //  return cell.getValues();
 }
-
