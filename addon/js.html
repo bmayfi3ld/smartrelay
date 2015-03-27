@@ -61,20 +61,16 @@ function drawChart(arrayIN) {
       }
 
 
-      
-
-
 
       // add all charts
       for(var i = 0; i < arrayIN[0].length-1; i++) {
         var options = {
-          chart: {
-            title: arrayIN[0][i+1]
-          },
+          title: arrayIN[0][i+1],        
           width: 900,
           height: 500,
-          legend: {position: 'none'}
-      };
+          curveType: 'function',
+          legend: {position: 'none'},                    
+        }
         var chart = new google.charts.Line(document.getElementById('chart' + i));
         chart.draw(dataArr[i], options);
       }
