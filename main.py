@@ -7,7 +7,7 @@ import Adafruit_BBIO.ADC as ADC         # ADC control
 import Adafruit_BBIO.GPIO as GPIO       # GPIO control
 from time import sleep                  # pausing
 from time import time                   # timing
-from datetime import datetime           # timestamp
+import datetime                         # timestamp
 import thread                           # multithreading
 import ConfigParser                     # read config file
 import logging                          # for basic local logging
@@ -16,11 +16,12 @@ from os.path import isfile              # checking for existing files
 import Adafruit_CharLCD as LCD          # lcd driver
 import Adafruit_DHT                     # temp and humidity sensor driver
 import Adafruit_BBIO.PWM as PWM         # PWM
+import smtplib                          # for sending mail
 
 print('Starting Up')
 
 # wait for correct time
-while datetime.today().year < 2015:
+while datetime.datetime.today().year < 2015:
     print('Waiting for Time')
     sleep(5)
 
@@ -56,13 +57,14 @@ pin_registry = {
     'battery_ain'       : 'P9_40',
     'current_ain'       : 'P9_36'
 }
+last_email = datetime.datetime.today() - datetime.timedelta(days=1)  # last time an email was sent
 
 
 # global setup
 Config = ConfigParser.ConfigParser()    # read in config file
 Config.read("/var/lib/cloud9/smartrelay/smartrelay/config.ini")
 
-# define functions (which usually are individual threads)
+# define threads
 
 # # the logger just takes the values and updates the global variables
 def value_update():
@@ -144,10 +146,10 @@ def commander():
         # check if values are out of range
         # if out of thresh(from config) turn off until return
         # if out of thresh for current kill until further notice
-        thresh_list = Config.options('Threshold')
+        thresh_list = Config.options('Shutdown')
         trip_count = 0
         for item in thresh_list:
-            thresh_in = Config.get('Threshold', item).split(',')
+            thresh_in = Config.get('Shutdown', item).split(',')
             
             item_v = latest_values[item]
             if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
@@ -259,7 +261,7 @@ def logger():
         # 'Temp={0:0.1f}*C  Humidity={1:0.1f}%'.format(temperature, humidity)
         
         # create logs
-        newLog = str(datetime.today())
+        newLog = str(datetime.datetime.today())
         for variable, value in latest_values.iteritems():
             newLog += ', ' + str(value)
         my_logger.info(newLog)
@@ -293,6 +295,7 @@ def cloud_logger():
     global latest_values
     global command_list
     global onoff
+    global last_email
     
     # cloud init
     try:
@@ -309,32 +312,66 @@ def cloud_logger():
     print('Cloud Thread Initialized')
     
     while True:
-        try:
-            # create logs
-            newLog = str(datetime.today())
-            for variable, value in latest_values.iteritems():
-                newLog += ', ' + str(value)
-            # print(newLog)
-            logs.append_row(newLog.split(', '))
+        # try:
+        # create logs
+        newLog = str(datetime.datetime.today())
+        for variable, value in latest_values.iteritems():
+            newLog += ', ' + str(value)
+        # print(newLog)
+        logs.append_row(newLog.split(', '))
+        
+        # update cloud config page
+        cofig.update_acell('B1', onoff)
+        cofig.update_acell('B3', datetime.datetime.today())
+        
+        # check for command
+        if(cofig.acell('B2').value == 'off'): 
+            command_list[2] = 0
+        else: 
+            command_list[2] = 1
+    
+        # send email if needed
+        thresh_list = Config.options('Warning')
+        trip_count = 0
+        for item in thresh_list:
+            thresh_in = Config.get('Warning', item).split(',')
             
-            # update cloud config page
-            cofig.update_acell('B1', onoff)
-            cofig.update_acell('B3', datetime.today())
-            
-            # check for command
-            if(cofig.acell('B2').value == 'off'): 
-                command_list[2] = 0
+            item_v = latest_values[item]
+            if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
+                trip_count += 1
+        
+        if trip_count > 0:
+            # send email if one hasn't been sent today
+            print('email')
+            if (datetime.datetime.today()) - last_email < datetime.timedelta(days=1):
+                print 'email already sent today'
             else: 
-                command_list[2] = 1
+                sendemail(item,item_v)
+                last_email = datetime.datetime.today()
         
-            sleep(15)
+        sleep(15)
             
-        except:
-            print('Cloud Thread Failed')
-            sleep(60)
-            cloud_logger()
-            return
-        
+        # except:
+        #     print('Cloud Thread Failed')
+        #     sleep(60)
+        #     cloud_logger()
+        #     return
+    
+def sendemail(item, value):
+    sender = Config.get('SmartRelay','email')
+    receivers = ['supernova2468@gmail.com']
+    
+    message =  'From: OSU Smart Relay' + Config.get('SmartRelay','email') + '\nTo:' + receivers[0] + '\nSubject: ' + item +' has passed limit with value of ' + str(value)
+    
+    try:
+        session = smtplib.SMTP_SSL('smtp.gmail.com:465')
+        session.login(Config.get('SmartRelay','email'),Config.get('SmartRelay','psww'))
+        session.sendmail(sender, receivers, message)
+        session.quit()   
+    except smtplib.SMTPException:
+        print "Error: unable to send email"
+
+    
 def runner():
     print('Running')
     
@@ -345,7 +382,7 @@ def runner():
     
     num = 0
     
-    sleep(120)
+    sleep(60)
     
     while True:
         print(onoff)
@@ -372,8 +409,8 @@ print('Threads Started')
 
 
 # for when being run by cron job
-while True:
-    sleep(60)
+# while True:
+#     sleep(60)
     
 
 raw_input("Press Enter to kill program\n")
