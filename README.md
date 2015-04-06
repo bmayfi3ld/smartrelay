@@ -20,9 +20,9 @@ After configuring the device can operate completely offline, logging and protect
 
 ##Setup
 
-Run setup file from GitHub
+Run setup file from GitHub on a fresh BBB
 ```sh
-wget https://github.com/supernova2468/smartrelay/raw/master/setup.sh
+wget https://github.com/supernova2468/smartrelay/raw/master/setup.sh --no-check-certificate
 chmod u+rwx setup.sh
 ./setup.sh
 ```
