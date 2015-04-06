@@ -1,4 +1,5 @@
 sudo apt-get update
+sudo ntpdate pool.ntp.org
 sudo apt-get install build-essential python-dev python-setuptools python-pip python-smbus ntp -y
 sudo rm /etc/localtime
 sudo ln -s /usr/share/zoneinfo/US/Central /etc/localtime
