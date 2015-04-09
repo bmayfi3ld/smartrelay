@@ -28,7 +28,7 @@ while datetime.date.today() < datetime.date(2015,04,9):
 
 # global variables
 directory = '/var/lib/cloud9/workspace/smartrelay/'
-command_list = [0, 0, 1, 1]     # 4 sources: button, logs, remote, amps
+command_list = [1, 0, 1, 1]     # 4 sources: button, logs, remote, amps
 latest_values = {
     'voltage'   : -1,
     'amps'      : -1,
@@ -64,6 +64,7 @@ pin_registry = {
 # global setup
 Config = ConfigParser.ConfigParser()    # read in config file
 Config.read(directory + 'config.ini')
+ADC.setup()
 
 # define threads
 
@@ -75,7 +76,7 @@ def value_update():
     global pin_registry
 
     # I/O init
-    ADC.setup()
+    
     GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
     
     # timer
@@ -85,12 +86,6 @@ def value_update():
     print('Value Update Initialized')
     
     while True:
-        # get battery voltage
-        value = ADC.read(pin_registry['battery_ain'])
-        # * 1.8 * 10
-        value = latest_values['battery']
-        
-        
         # frequency measure
         count = 0
         end = time.time() + time_to_measure
@@ -131,8 +126,6 @@ def commander():
     
     # init
     GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
-    GPIO.setup(pin_registry['led1'], GPIO.OUT)
-    light = True
     
     
     sleep(15)   # delay to allow other commands to init
@@ -141,13 +134,7 @@ def commander():
     
     
     while True:
-        #flash heartbeat light
-        if light:
-            GPIO.output(pin_registry['led1'], GPIO.LOW)
-            light = False
-        else:
-            GPIO.output(pin_registry['led1'], GPIO.HIGH)
-            light = True
+
         
         # basic shutoff check
         if (command_list.count(0) > 0):
@@ -263,6 +250,12 @@ def logger():
     print('Logging Thread Initialized')
     
     while True:
+        # get battery voltage
+        value = ADC.read(pin_registry['battery_ain'])
+        value = value * 1.8 * 10
+        print value
+        value = latest_values['battery']
+        
         # get temp
         humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
         
@@ -314,8 +307,9 @@ def cloud_logger():
     global command_list
     global onoff
 
+    sleep(30)
     print 'Cloud Thread Initialized'
-    sleep(60)
+    
     while True:
         #build log
         if onoff == 'On':
@@ -337,7 +331,7 @@ def cloud_logger():
         
         try:
             response = urllib2.urlopen(request).read()
-            print 'ping'
+            # print 'ping'
             if response == 'True':
                 command_list[2] = 1
             else:
@@ -349,6 +343,7 @@ def cloud_logger():
 		
         sleep(60)
     
+# # responsible for heartbeat
 def runner():
     print('Running')
     
@@ -358,17 +353,30 @@ def runner():
     global latest_values
     
     num = 0
+    GPIO.setup(pin_registry['led1'], GPIO.OUT)
     
-    sleep(60)
+    sleep(5)
     
     while True:
-        print(onoff)
-        print(num)
-        num += 1
-        print(command_list)
-        print(latest_values)
-        # print('Humidity is at ' + str(latest_values['humidity']))
-        sleep(10)
+        #flash heartbeat light
+        blink = .1
+        GPIO.output(pin_registry['led1'], GPIO.HIGH)
+        sleep(blink)
+        GPIO.output(pin_registry['led1'], GPIO.LOW)
+        sleep(blink)
+        GPIO.output(pin_registry['led1'], GPIO.HIGH)
+        sleep(blink)
+        GPIO.output(pin_registry['led1'], GPIO.LOW)
+        
+        
+        # print(onoff)
+        # print(num)
+        # num += 1
+        # print(command_list)
+        # print(latest_values)
+        
+        
+        sleep(1)
 
 
 print('Initialized')
@@ -386,8 +394,8 @@ print('Threads Started')
 
 
 # for when being run by cron job
-# while True:
-#     sleep(60)
+while True:
+    sleep(60)
     
 
 raw_input("Press Enter to kill program\n")
