@@ -131,17 +131,34 @@ def commander():
     
     # init
     GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
+    GPIO.setup(pin_registry['led1'], GPIO.OUT)
+    light = True
+    
+    
     sleep(15)   # delay to allow other commands to init
     
     print('Commander Thread Initialized')
     
+    
     while True:
+        #flash heartbeat light
+        if light:
+            GPIO.output(pin_registry['led1'], GPIO.LOW)
+            light = False
+        else:
+            GPIO.output(pin_registry['led1'], GPIO.HIGH)
+            light = True
+        
         # basic shutoff check
         if (command_list.count(0) > 0):
             GPIO.output(pin_registry['relay_output'], GPIO.LOW)
+            GPIO.output(pin_registry['relay_secondary'], GPIO.LOW)
+            GPIO.output(pin_registry['led2'], GPIO.LOW)
             onoff = 'Off'
         else: 
             GPIO.output(pin_registry['relay_output'], GPIO.HIGH)
+            GPIO.output(pin_registry['relay_secondary'], GPIO.HIGH)
+            GPIO.output(pin_registry['led2'], GPIO.HIGH)
             onoff = 'On'
         
         # check if values are out of range
@@ -236,7 +253,7 @@ def logger():
     )
     
     # I/O init
-    GPIO.setup(pin_registry['led1'], GPIO.OUT)
+    
     GPIO.setup(pin_registry['led2'], GPIO.OUT)
     GPIO.setup(pin_registry['button_secondary'], GPIO.IN)
     
