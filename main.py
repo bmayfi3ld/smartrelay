@@ -6,7 +6,7 @@ import gspread                          # allows access to Google spreadsheets
 import Adafruit_BBIO.ADC as ADC         # ADC control
 import Adafruit_BBIO.GPIO as GPIO       # GPIO control
 from time import sleep                  # pausing
-from time import time                   # timing
+import time
 import datetime                         # timestamp
 import thread                           # multithreading
 import ConfigParser                     # read config file
@@ -17,11 +17,12 @@ import Adafruit_CharLCD as LCD          # lcd driver
 import Adafruit_DHT                     # temp and humidity sensor driver
 import Adafruit_BBIO.PWM as PWM         # PWM
 import smtplib                          # for sending mail
+import urllib2                          # to post data to gae
 
 print('Starting Up')
 
 # wait for correct time
-while datetime.datetime.today().year < 2015:
+while datetime.date.today() < datetime.date(2015,04,9):
     print('Waiting for Time')
     sleep(5)
 
@@ -58,7 +59,6 @@ pin_registry = {
     'battery_ain'       : 'P9_40',
     'current_ain'       : 'P9_36'
 }
-last_email = datetime.datetime.today() - datetime.timedelta(days=1)  # last time an email was sent
 
 
 # global setup
@@ -93,8 +93,8 @@ def value_update():
         
         # frequency measure
         count = 0
-        end = time() + time_to_measure
-        while end > time():
+        end = time.time() + time_to_measure
+        while end > time.time():
             GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
             count += 1
         value = count/float(time_to_measure)
@@ -270,108 +270,67 @@ def logger():
         # update lcd
         lcd.clear()
         if slide == 1:
-            lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nStatus: ' + onoff)
+            lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nBat Volt: ' + str(latest_values['battery']))
             slide += 1
         elif slide == 2:
-            lcd.message('Bat Volt:' + str(latest_values['battery']) + '\nStatus: ' + onoff)
+            lcd.message('Voltage:' + str(latest_values['voltage']) + '\nCurrent: ' + str(latest_values['amps']))
             slide = 1
             
         # update leds
-        GPIO.output(pin_registry['led1'], GPIO.HIGH)
-        GPIO.output(pin_registry['led2'], GPIO.HIGH)
-        GPIO.output(pin_registry['relay_output'], GPIO.HIGH)
-        GPIO.output(pin_registry['relay_secondary'], GPIO.HIGH)
-        sleep(5)
-        GPIO.output(pin_registry['led1'], GPIO.LOW)
-        GPIO.output(pin_registry['led2'], GPIO.LOW)
-        GPIO.output(pin_registry['relay_output'], GPIO.LOW)
-        GPIO.output(pin_registry['relay_secondary'], GPIO.LOW)
+        # GPIO.output(pin_registry['led1'], GPIO.HIGH)
+        # GPIO.output(pin_registry['led2'], GPIO.HIGH)
+        # GPIO.output(pin_registry['relay_output'], GPIO.HIGH)
+        # GPIO.output(pin_registry['relay_secondary'], GPIO.HIGH)
+        # sleep(5)
+        # GPIO.output(pin_registry['led1'], GPIO.LOW)
+        # GPIO.output(pin_registry['led2'], GPIO.LOW)
+        # GPIO.output(pin_registry['relay_output'], GPIO.LOW)
+        # GPIO.output(pin_registry['relay_secondary'], GPIO.LOW)
         
         sleep(15)
         
-# # this thread handles cloud logging and pulling commands
+# # this thread handles cloud logging and pulling commands       
 def cloud_logger():
-    print('Cloud Thread')
-    
+    print 'Cloud Thread'
+    # Dev Cloud Thread
     global latest_values
     global command_list
     global onoff
-    global last_email
-    
-    # cloud init
-    try:
-        gc = gspread.login(Config.get('SmartRelay','email'), Config.get('SmartRelay','psww'))
-        wkb = gc.open_by_url(Config.get('SmartRelay','sheet URL'))
-        logs = wkb.worksheet("logs")
-        cofig = wkb.worksheet("config")
-    except:
-        print('Cloud Connection Failed')
-        sleep(30)
-        cloud_logger()
-        return
-    
-    print('Cloud Thread Initialized')
-    
-    while True:
-        try:
-            # create logs
-            newLog = str(datetime.datetime.today())
-            for variable, value in latest_values.iteritems():
-                newLog += ', ' + str(value)
-            # print(newLog)
-            logs.append_row(newLog.split(', '))
-            
-            # update cloud config page
-            cofig.update_acell('B1', onoff)
-            cofig.update_acell('B3', datetime.datetime.today())
-            
-            # check for command
-            if(cofig.acell('B2').value == 'off'): 
-                command_list[2] = 0
-            else: 
-                command_list[2] = 1
-        
-            # send email if needed
-            thresh_list = Config.options('Warning')
-            trip_count = 0
-            for item in thresh_list:
-                thresh_in = Config.get('Warning', item).split(',')
-                
-                item_v = latest_values[item]
-                if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
-                    trip_count += 1
-            
-            if trip_count > 0:
-                # send email if one hasn't been sent today
-                print('email')
-                if (datetime.datetime.today()) - last_email < datetime.timedelta(days=1):
-                    print 'email already sent today'
-                else: 
-                    sendemail(item,item_v)
-                    last_email = datetime.datetime.today()
-            
-            sleep(15)
-            
-        except:
-            print('Cloud Thread Failed')
-            sleep(60)
-            cloud_logger()
-            return
-    
-def sendemail(item, value):
-    sender = Config.get('SmartRelay','email')
-    receivers = ['supernova2468@gmail.com']
-    
-    message =  'From: OSU Smart Relay' + Config.get('SmartRelay','email') + '\nTo:' + receivers[0] + '\nSubject: ' + item +' has passed limit with value of ' + str(value)
-    
-    try:
-        session = smtplib.SMTP_SSL('smtp.gmail.com:465')
-        session.login(Config.get('SmartRelay','email'),Config.get('SmartRelay','psww'))
-        session.sendmail(sender, receivers, message)
-        session.quit()   
-    except smtplib.SMTPException:
-        print "Error: unable to send email"
 
+    print 'Cloud Thread Initialized'
+    sleep(60)
+    while True:
+        #build log
+        if onoff == 'On':
+            state = True
+        else:
+            state = False
+        urlstring = 'https://smart-relay.appspot.com/post?timestamp={}&temperature={}&humidity={}&voltage={}&current={}&battery_voltage={}&frequency={}&state={}&password={}'
+        request = urlstring.format(
+            str(time.time()),
+            latest_values['temp'],
+            latest_values['humidity'],
+            latest_values['voltage'],
+            latest_values['amps'],
+            latest_values['battery'],
+            latest_values['frequency'],
+            state,
+            'my_password'
+            )
+        
+        try:
+            response = urllib2.urlopen(request).read()
+            print 'ping'
+            if response == 'True':
+                command_list[2] = 1
+            else:
+                command_list[2] = 0
+    	except:
+    	    print 'Cloud Thread Failed'
+    	    sleep(60)
+    	    cloud_logger()
+		
+        sleep(60)
     
 def runner():
     print('Running')
