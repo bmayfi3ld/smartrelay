@@ -253,8 +253,9 @@ def logger():
         # get battery voltage
         value = ADC.read(pin_registry['battery_ain'])
         value = value * 1.8 * 10
+        value = round(value,2)
+        latest_values['battery'] = value
         print value
-        value = latest_values['battery']
         
         # get temp
         humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
@@ -297,7 +298,7 @@ def logger():
         # GPIO.output(pin_registry['relay_output'], GPIO.LOW)
         # GPIO.output(pin_registry['relay_secondary'], GPIO.LOW)
         
-        sleep(15)
+        sleep(2)
         
 # # this thread handles cloud logging and pulling commands       
 def cloud_logger():
