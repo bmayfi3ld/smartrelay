@@ -298,7 +298,7 @@ def logger():
         # GPIO.output(pin_registry['relay_output'], GPIO.LOW)
         # GPIO.output(pin_registry['relay_secondary'], GPIO.LOW)
         
-        sleep(2)
+        sleep(15)
         
 # # this thread handles cloud logging and pulling commands       
 def cloud_logger():
