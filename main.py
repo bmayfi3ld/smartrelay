@@ -80,7 +80,7 @@ def value_update():
     GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
     
     # timer
-    time_to_measure = 5 # in seconds
+    time_to_measure = 2 # in seconds
     
     
     print('Value Update Initialized')
@@ -100,6 +100,7 @@ def value_update():
         end = time.time() + time_to_measure
         while end > time.time():
             voltage_stack.append(ADC.read(pin_registry['voltage_ain']))
+        # print voltage_stack
         value = round(max(voltage_stack), 4) # need adjustment
         latest_values['voltage'] = value
         
@@ -112,7 +113,7 @@ def value_update():
         latest_values['amps'] = value
         
         
-        sleep(1)
+        sleep(5)
         
 # # always checking to see if the device needs to shutoff
 def commander():
@@ -172,6 +173,8 @@ def commander():
             command_list[0] = not command_list[0]
             button_status = 0
             sleep(1)
+        
+        sleep(1)
         
 # # button thread to handle button commands
 def button_interrupt():
@@ -246,6 +249,8 @@ def logger():
     
     GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
     GPIO.setup(pin_registry['relay_secondary'], GPIO.OUT)
+    
+    sleep(30)
     
     print('Logging Thread Initialized')
     
@@ -370,7 +375,7 @@ def runner():
         GPIO.output(pin_registry['led1'], GPIO.LOW)
         
         
-        # print latest_values['amps']
+        print latest_values['frequency']
         
         
         sleep(1)
@@ -391,8 +396,8 @@ print('Threads Started')
 
 
 # for when being run by cron job
-while True:
-    sleep(60)
+# while True:
+#     sleep(60)
     
 
 raw_input("Press Enter to kill program\n")
