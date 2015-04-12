@@ -93,7 +93,9 @@ def value_update():
             GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
             count += 1
         value = count/float(time_to_measure)
-        latest_values['frequency'] = value
+        if abs(value - 60) < 5:
+            latest_values['frequency'] = value
+        
         
         # voltage measure
         voltage_stack = []
@@ -102,6 +104,7 @@ def value_update():
             voltage_stack.append(ADC.read(pin_registry['voltage_ain']))
         # print voltage_stack
         value = round(max(voltage_stack), 4) # need adjustment
+        value = value * 338.600451467
         latest_values['voltage'] = value
         
         # amps measure
@@ -110,6 +113,8 @@ def value_update():
         while end > time.time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
         value = round(max(current_stack), 4) # need adjustment
+        if value < .1:
+            value = 0
         latest_values['amps'] = value
         
         
@@ -375,7 +380,7 @@ def runner():
         GPIO.output(pin_registry['led1'], GPIO.LOW)
         
         
-        print latest_values['frequency']
+        # print '{},{},{}'.format(latest_values['frequency'],latest_values['voltage'],latest_values['amps'])
         
         
         sleep(1)
