@@ -55,9 +55,9 @@ pin_registry = {
     'lcd_d7'            : 'P8_7',
     'lcd_backlight'     : 'P8_7',
     'temp_input'        : 'P9_22',
-    'voltage_ain'       : 'P9_38',
+    'voltage_ain'       : 'P9_36',
     'battery_ain'       : 'P9_40',
-    'current_ain'       : 'P9_36'
+    'current_ain'       : 'P9_38'
 }
 
 
@@ -97,18 +97,18 @@ def value_update():
         
         # voltage measure
         voltage_stack = []
-        end = time() + time_to_measure
-        while end > time():
+        end = time.time() + time_to_measure
+        while end > time.time():
             voltage_stack.append(ADC.read(pin_registry['voltage_ain']))
         value = round(max(voltage_stack), 4) # need adjustment
         latest_values['voltage'] = value
         
         # amps measure
         current_stack = []
-        end = time() + time_to_measure
-        while end > time():
+        end = time.time() + time_to_measure
+        while end > time.time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
-        value = round(max(voltage_stack), 4) # need adjustment
+        value = round(max(current_stack), 4) # need adjustment
         latest_values['amps'] = value
         
         
@@ -255,7 +255,7 @@ def logger():
         value = value * 1.8 * 10
         value = round(value,2)
         latest_values['battery'] = value
-        print value
+        # rint value
         
         # get temp
         humidity, temp = Adafruit_DHT.read_retry(Adafruit_DHT.DHT22, pin_registry['temp_input'])
@@ -370,11 +370,7 @@ def runner():
         GPIO.output(pin_registry['led1'], GPIO.LOW)
         
         
-        # print(onoff)
-        # print(num)
-        # num += 1
-        # print(command_list)
-        # print(latest_values)
+        # print latest_values['amps']
         
         
         sleep(1)
