@@ -28,15 +28,23 @@ while datetime.date.today() < datetime.date(2015,04,9):
 
 # global variables
 directory = '/var/lib/cloud9/workspace/smartrelay/'
-command_list = [1, 0, 1, 1]     # 4 sources: button, logs, remote, amps
+command_list = [1, 0, 1, 1]     # 4 sources: button, logs, remote, current
 latest_values = {
-    'voltage'   : -1,
-    'amps'      : -1,
-    'temp'      : -1,
-    'battery'   : -1,
-    'humidity'  : -1,
-    'frequency' : -1
+    'voltage'           : -1,
+    'current'           : -1,
+    'temperature'       : -1,
+    'battery_voltage'   : -1,
+    'humidity'          : -1,
+    'frequency'         : -1
 }                               # most recent values of sensor reading
+cutoff_dict = {
+    'battery_voltage'   : [0,500],
+	'current'           : [0,500],
+	'frequency'         : [0,500],
+	'humidity'          : [0,500],
+	'temperature'       : [0,500],
+	'voltage'           : [0,500],
+}
 onoff = 'Off'                   # relay on or off
 button_status = 0               # 1 = command toggle, 2 = reset all
 pin_registry = {
@@ -62,11 +70,7 @@ pin_registry = {
 
 
 # global setup
-Config = ConfigParser.ConfigParser()    # read in config file
-Config.read(directory + 'config.ini')
 ADC.setup()
-
-# define threads
 
 # # the logger just takes the values and updates the global variables
 def value_update():
@@ -103,19 +107,20 @@ def value_update():
         while end > time.time():
             voltage_stack.append(ADC.read(pin_registry['voltage_ain']))
         # print voltage_stack
-        value = round(max(voltage_stack), 4) # need adjustment
-        value = value * 338.600451467
-        latest_values['voltage'] = value
+        value = max(voltage_stack)
+        value = value * 349.514902442
+        latest_values['voltage'] = round(value,2)
         
         # amps measure
         current_stack = []
         end = time.time() + time_to_measure
         while end > time.time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
-        value = round(max(current_stack), 4) # need adjustment
-        if value < .1:
+        value = max(current_stack)
+        if value < .025:
             value = 0
-        latest_values['amps'] = value
+        value = value * 29.9999625
+        latest_values['current'] = round(value,2)
         
         
         sleep(5)
@@ -129,6 +134,7 @@ def commander():
     global button_status
     global latest_values
     global pin_registry
+    global cutoff_dict
     
     # init
     GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
@@ -141,7 +147,6 @@ def commander():
     
     while True:
 
-        
         # basic shutoff check
         if (command_list.count(0) > 0):
             GPIO.output(pin_registry['relay_output'], GPIO.LOW)
@@ -157,10 +162,9 @@ def commander():
         # check if values are out of range
         # if out of thresh(from config) turn off until return
         # if out of thresh for current kill until further notice
-        thresh_list = Config.options('Shutdown')
         trip_count = 0
-        for item in thresh_list:
-            thresh_in = Config.get('Shutdown', item).split(',')
+        for item in cutoff_dict:
+            thresh_in = cutoff_dict[item]
             
             item_v = latest_values[item]
             if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
@@ -246,6 +250,7 @@ def logger():
         lcd_rows, 
         pin_registry['lcd_backlight']
     )
+    lcd.message('Booting Up...')
     
     # I/O init
     
@@ -255,7 +260,7 @@ def logger():
     GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
     GPIO.setup(pin_registry['relay_secondary'], GPIO.OUT)
     
-    sleep(30)
+    sleep(10)
     
     print('Logging Thread Initialized')
     
@@ -264,7 +269,7 @@ def logger():
         value = ADC.read(pin_registry['battery_ain'])
         value = value * 1.8 * 10
         value = round(value,2)
-        latest_values['battery'] = value
+        latest_values['battery_voltage'] = value
         # rint value
         
         # get temp
@@ -277,10 +282,8 @@ def logger():
         else:
             temp = 9.0/5.0 * temp + 32
 
-        latest_values['temp'] = temp
+        latest_values['temperature'] = temp
         latest_values['humidity'] = humidity
-        
-        # 'Temp={0:0.1f}*C  Humidity={1:0.1f}%'.format(temperature, humidity)
         
         # create logs
         newLog = str(datetime.datetime.today())
@@ -291,22 +294,11 @@ def logger():
         # update lcd
         lcd.clear()
         if slide == 1:
-            lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nBat Volt: ' + str(latest_values['battery']))
+            lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nBat Volt: ' + str(latest_values['battery_voltage']))
             slide += 1
         elif slide == 2:
-            lcd.message('Voltage:' + str(latest_values['voltage']) + '\nCurrent: ' + str(latest_values['amps']))
+            lcd.message('Voltage:' + str(latest_values['voltage']) + '\nCurrent: ' + str(latest_values['current']))
             slide = 1
-            
-        # update leds
-        # GPIO.output(pin_registry['led1'], GPIO.HIGH)
-        # GPIO.output(pin_registry['led2'], GPIO.HIGH)
-        # GPIO.output(pin_registry['relay_output'], GPIO.HIGH)
-        # GPIO.output(pin_registry['relay_secondary'], GPIO.HIGH)
-        # sleep(5)
-        # GPIO.output(pin_registry['led1'], GPIO.LOW)
-        # GPIO.output(pin_registry['led2'], GPIO.LOW)
-        # GPIO.output(pin_registry['relay_output'], GPIO.LOW)
-        # GPIO.output(pin_registry['relay_secondary'], GPIO.LOW)
         
         sleep(15)
         
@@ -317,7 +309,10 @@ def cloud_logger():
     global latest_values
     global command_list
     global onoff
-
+    global cutoff_dict
+    
+    request_stack = []
+    
     sleep(30)
     print 'Cloud Thread Initialized'
     
@@ -327,31 +322,51 @@ def cloud_logger():
             state = True
         else:
             state = False
+        
         urlstring = 'https://smart-relay.appspot.com/post?timestamp={}&temperature={}&humidity={}&voltage={}&current={}&battery_voltage={}&frequency={}&state={}&password={}'
         request = urlstring.format(
             str(time.time()),
-            latest_values['temp'],
+            latest_values['temperature'],
             latest_values['humidity'],
             latest_values['voltage'],
-            latest_values['amps'],
-            latest_values['battery'],
+            latest_values['current'],
+            latest_values['battery_voltage'],
             latest_values['frequency'],
             state,
             'my_password'
             )
+            
+        if len(request_stack) < 100:
+		    request_stack.append(request)
         
-        try:
-            response = urllib2.urlopen(request).read()
-            # print 'ping'
-            if response == 'True':
-                command_list[2] = 1
-            else:
-                command_list[2] = 0
-    	except:
-    	    print 'Cloud Thread Failed'
-    	    sleep(60)
-    	    cloud_logger()
-		
+        response = ''
+        for r in list(request_stack):
+    	    try:
+                response = urllib2.urlopen(request).read()
+                request_stack.remove(r)
+                time.sleep(1)
+                
+            except urllib2.URLError:
+                print 'Cloud Thread Failed'
+                break
+        else:
+    		response_list = response.split(',')
+    		if 'rue' in response_list[0]:
+    			command_list[2] = 1
+    		else:
+    			command_list[2] = 0
+    		int_list = []
+    		for r in response_list:
+    			if 'rue' not in r and 'alse' not in r:
+    				int_list.append(int(r))
+    		
+    		cutoff_dict['battery_voltage'] = [int_list[0],int_list[1]]
+    		cutoff_dict['current'] = [int_list[2],int_list[3]]
+    		cutoff_dict['frequency'] = [int_list[4],int_list[5]]
+    		cutoff_dict['humidity'] = [int_list[6],int_list[7]]
+    		cutoff_dict['temperature'] = [int_list[8],int_list[9]]
+    		cutoff_dict['voltage'] = [int_list[10],int_list[11]]
+    	
         sleep(60)
     
 # # responsible for heartbeat
@@ -380,7 +395,7 @@ def runner():
         GPIO.output(pin_registry['led1'], GPIO.LOW)
         
         
-        # print '{},{},{}'.format(latest_values['frequency'],latest_values['voltage'],latest_values['amps'])
+        # print '{},{}'.format(latest_values['voltage'],latest_values['current'])
         
         
         sleep(1)
