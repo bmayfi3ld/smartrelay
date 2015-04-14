@@ -84,7 +84,9 @@ def value_update():
     GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
     
     # timer
-    time_to_measure = 2 # in seconds
+    time_to_measure = 4 # in seconds
+    
+    frequency_time_to_measure = .25
     
     
     print('Value Update Initialized')
@@ -92,13 +94,14 @@ def value_update():
     while True:
         # frequency measure
         count = 0
-        end = time.time() + time_to_measure
+        end = time.time() + frequency_time_to_measure
         while end > time.time():
             GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
             count += 1
-        value = count/float(time_to_measure)
-        if abs(value - 60) < 5:
-            latest_values['frequency'] = value
+        value = count/float(frequency_time_to_measure) - 4
+        if abs(value - 60) < 3:
+            pass
+            # latest_values['frequency'] = value
         
         
         # voltage measure
@@ -117,9 +120,10 @@ def value_update():
         while end > time.time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
         value = max(current_stack)
-        if value < .025:
+        if value < .03:
             value = 0
-        value = value * 29.9999625
+        latest_values['frequency'] = value
+        value = value * 1.8 * 10
         latest_values['current'] = round(value,2)
         
         
@@ -395,7 +399,7 @@ def runner():
         GPIO.output(pin_registry['led1'], GPIO.LOW)
         
         
-        # print '{},{}'.format(latest_values['voltage'],latest_values['current'])
+        # print '{},{}'.format(latest_values['current'],latest_values['frequency'])
         
         
         sleep(1)
@@ -416,8 +420,9 @@ print('Threads Started')
 
 
 # for when being run by cron job
-# while True:
-#     sleep(60)
+
+while True:
+    sleep(60)
     
 
 raw_input("Press Enter to kill program\n")
