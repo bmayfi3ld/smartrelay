@@ -100,8 +100,7 @@ def value_update():
             count += 1
         value = count/float(frequency_time_to_measure) - 4
         if abs(value - 60) < 3:
-            pass
-            # latest_values['frequency'] = value
+            latest_values['frequency'] = value
         
         
         # voltage measure
@@ -120,9 +119,8 @@ def value_update():
         while end > time.time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
         value = max(current_stack)
-        if value < .03:
-            value = 0
-        latest_values['frequency'] = value
+        # if value < .03:
+        #     value = 0
         value = value * 1.8 * 10
         latest_values['current'] = round(value,2)
         
@@ -268,6 +266,8 @@ def logger():
     
     print('Logging Thread Initialized')
     
+    r1 = 0
+    
     while True:
         # get battery voltage
         value = ADC.read(pin_registry['battery_ain'])
@@ -297,6 +297,7 @@ def logger():
         
         # update lcd
         lcd.clear()
+        # lcd.message('{},{}'.format(latest_values['current'],r1))
         if slide == 1:
             lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nBat Volt: ' + str(latest_values['battery_voltage']))
             slide += 1
