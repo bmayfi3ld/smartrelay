@@ -104,27 +104,20 @@ pin_registry = {
 # global setup
 ADC.setup()
 
-# # the logger just takes the values and updates the global variables
-def value_update():
-    print('Value Update Thread')
-
+def frequency_update():
+    print 'Frequency Update'
+    
     global latest_values
     global pin_registry
-
+    
     # I/O init
-    
     GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
-    
-    # timer
-    time_to_measure = 4 # in seconds
     
     frequency_time_to_measure = .25
     
-    
-    print('Value Update Initialized')
-    
     while True:
         # frequency measure
+        latest_values['frequency'] = 0 # Matt's Idea
         count = 0
         end = time.time() + frequency_time_to_measure
         while end > time.time():
@@ -134,7 +127,21 @@ def value_update():
         if abs(value - 60) < 3:
             latest_values['frequency'] = round(value,1)
         
-        
+        sleep(1)
+
+# # the logger just takes the values and updates the global variables
+def value_update():
+    print('Value Update Thread')
+
+    global latest_values
+    global pin_registry
+
+    # timer
+    time_to_measure = 4 # in seconds
+    
+    print('Value Update Initialized')
+    
+    while True:
         # voltage measure
         voltage_stack = []
         end = time.time() + time_to_measure
@@ -176,7 +183,7 @@ def commander():
     GPIO.setup(pin_registry['relay_output'], GPIO.OUT)
     
     
-    sleep(15)   # delay to allow other commands to init
+    sleep(9)   # delay to allow other commands to init
     
     print('Commander Thread Initialized')
     
@@ -199,26 +206,35 @@ def commander():
         # if out of thresh(from config) turn off until return
         # if out of thresh for current kill until further notice
         trip_count = 0
+        current_trip = False
         for item in cutoff_dict:
             thresh_in = cutoff_dict[item]
             
             item_v = latest_values[item]
             if item_v > int(thresh_in[1]) or item_v < int(thresh_in[0]):
                 trip_count += 1
+                if item == 'current':
+                    current_trip = True
         
         if trip_count > 0:
             command_list[1] = 0
         else:
             command_list[1] = 1
+            
+        if current_trip:
+            command_list[3] = 0
         
         # check if button has something to say
         # basic on/off 1
         # hard reset 2 (cloud also needs to be able to)
-        if (button_status == 1):
+        if button_status == 1:
             command_list[0] = not command_list[0]
             button_status = 0
-            sleep(1)
-        
+        elif button_status == 2:
+            command_list[2] = 1 # reset remote
+            command_list[3] = 1 # reset current
+            command_list[0] = 0 # button off (so it doesn't randomly start)
+            button_status = 0
         sleep(1)
         
 # # button thread to handle button commands
@@ -243,7 +259,7 @@ def button_interrupt():
         # debounce, determine hit or hold
         if count > 50000:
             button_status = 2
-        elif count > 1500:
+        elif count > 1000:
             button_status = 1
             
         count = 0
@@ -257,6 +273,7 @@ def logger():
     global pin_registry
     global latest_values
     global onoff
+    global command_list
     
     # log init    
     LOG_FILENAME = directory + 'data.log'
@@ -329,17 +346,20 @@ def logger():
             newLog += ', ' + str(value)
         my_logger.info(newLog)
         
+        sleep(2)
         # update lcd
         lcd.clear()
         # lcd.message('{},{}'.format(latest_values['current'],r1))
-        if slide == 1:
+        if onoff == 'Off':
+            lcd.message('Btn:{} Amp:{}\nInt:{} Thresh:{}'.format(command_list[0],command_list[3],command_list[2],command_list[1]))
+        elif slide == 1:
             lcd.message('Temp:' + '{0:0.1f}*F'.format(temp) + '\nBat Volt: ' + str(latest_values['battery_voltage']))
             slide += 1
         elif slide == 2:
             lcd.message('Voltage:' + str(latest_values['voltage']) + '\nCurrent: ' + str(latest_values['current']))
             slide = 1
         
-        sleep(15)
+        sleep(13)
         
 # # this thread handles cloud logging and pulling commands       
 def cloud_logger():
@@ -420,6 +440,7 @@ thread.start_new_thread(cloud_logger, ())
 thread.start_new_thread(button_interrupt, ())
 thread.start_new_thread(commander, ())
 thread.start_new_thread(value_update, ())
+thread.start_new_thread(frequency_update, ())
 
 print('Threads Started')
 
