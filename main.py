@@ -20,6 +20,38 @@ import smtplib                          # for sending mail
 import urllib2                          # to post data to gae
 
 print('Starting Up')
+# # responsible for heartbeat
+def runner():
+    print('Running')
+    
+    global command_list
+    global onoff
+    global button_status
+    global latest_values
+    
+    num = 0
+    GPIO.setup(pin_registry['led1'], GPIO.OUT)
+    
+    sleep(5)
+    
+    while True:
+        #flash heartbeat light
+        blink = .1
+        GPIO.output(pin_registry['led1'], GPIO.HIGH)
+        sleep(blink)
+        GPIO.output(pin_registry['led1'], GPIO.LOW)
+        sleep(blink)
+        GPIO.output(pin_registry['led1'], GPIO.HIGH)
+        sleep(blink)
+        GPIO.output(pin_registry['led1'], GPIO.LOW)
+        
+        
+        # print '{},{}'.format(latest_values['current'],latest_values['frequency'])
+        
+        
+        sleep(1)
+
+thread.start_new_thread(runner, ())
 
 # wait for correct time
 while datetime.date.today() < datetime.date(2015,04,9):
@@ -119,8 +151,8 @@ def value_update():
         while end > time.time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
         value = max(current_stack)
-        # if value < .03:
-        #     value = 0
+        if value < .03:
+            value = 0
         value = value * 1.8 * 10
         latest_values['current'] = round(value,2)
         
@@ -374,36 +406,7 @@ def cloud_logger():
     	
         sleep(60)
     
-# # responsible for heartbeat
-def runner():
-    print('Running')
-    
-    global command_list
-    global onoff
-    global button_status
-    global latest_values
-    
-    num = 0
-    GPIO.setup(pin_registry['led1'], GPIO.OUT)
-    
-    sleep(5)
-    
-    while True:
-        #flash heartbeat light
-        blink = .1
-        GPIO.output(pin_registry['led1'], GPIO.HIGH)
-        sleep(blink)
-        GPIO.output(pin_registry['led1'], GPIO.LOW)
-        sleep(blink)
-        GPIO.output(pin_registry['led1'], GPIO.HIGH)
-        sleep(blink)
-        GPIO.output(pin_registry['led1'], GPIO.LOW)
-        
-        
-        # print '{},{}'.format(latest_values['current'],latest_values['frequency'])
-        
-        
-        sleep(1)
+
 
 
 print('Initialized')
@@ -414,7 +417,6 @@ thread.start_new_thread(logger, ())
 thread.start_new_thread(cloud_logger, ())
 thread.start_new_thread(button_interrupt, ())
 thread.start_new_thread(commander, ())
-thread.start_new_thread(runner, ())
 thread.start_new_thread(value_update, ())
 
 print('Threads Started')
