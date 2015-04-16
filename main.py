@@ -132,7 +132,7 @@ def value_update():
             count += 1
         value = count/float(frequency_time_to_measure) - 4
         if abs(value - 60) < 3:
-            latest_values['frequency'] = value
+            latest_values['frequency'] = round(value,1)
         
         
         # voltage measure
@@ -143,7 +143,9 @@ def value_update():
         # print voltage_stack
         value = max(voltage_stack)
         value = value * 349.514902442
-        latest_values['voltage'] = round(value,2)
+        if value < 1:
+            value = 0
+        latest_values['voltage'] = round(value,1)
         
         # amps measure
         current_stack = []
@@ -154,7 +156,7 @@ def value_update():
         if value < .03:
             value = 0
         value = value * 1.8 * 10
-        latest_values['current'] = round(value,2)
+        latest_values['current'] = round(value,1)
         
         
         sleep(5)
@@ -305,7 +307,7 @@ def logger():
         value = ADC.read(pin_registry['battery_ain'])
         value = value * 1.8 * 10
         value = round(value,2)
-        latest_values['battery_voltage'] = value
+        latest_values['battery_voltage'] = round(value,1)
         # rint value
         
         # get temp
@@ -318,8 +320,8 @@ def logger():
         else:
             temp = 9.0/5.0 * temp + 32
 
-        latest_values['temperature'] = temp
-        latest_values['humidity'] = humidity
+        latest_values['temperature'] = round(temp,1)
+        latest_values['humidity'] = round(humidity,1)
         
         # create logs
         newLog = str(datetime.datetime.today())
