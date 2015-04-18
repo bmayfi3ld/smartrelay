@@ -9,6 +9,7 @@ from time import sleep                  # pausing
 import time
 import datetime                         # timestamp
 import thread                           # multithreading
+import threading
 import ConfigParser                     # read config file
 import logging                          # for basic local logging
 import logging.handlers                 # to remove file once size is exceeded
@@ -100,34 +101,35 @@ pin_registry = {
     'current_ain'       : 'P9_38'
 }
 
-
+frequency_watchdog = 0
 # global setup
 ADC.setup()
 
-def frequency_update():
-    print 'Frequency Update'
-    
-    global latest_values
-    global pin_registry
-    
-    # I/O init
-    GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
-    
-    frequency_time_to_measure = .25
-    
-    while True:
-        # frequency measure
-        latest_values['frequency'] = 0 # Matt's Idea
-        count = 0
-        end = time.time() + frequency_time_to_measure
-        while end > time.time():
-            GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
-            count += 1
-        value = count/float(frequency_time_to_measure) - 4
-        if abs(value - 60) < 3:
-            latest_values['frequency'] = round(value,1)
+class frequency_update(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        global latest_values
+        global pin_registry
+        global frequency_watchdog
         
-        sleep(1)
+        self.frequency_time_to_measure = .25
+    
+    def run(self):
+        global frequency_watchdog
+        # frequency measure
+        count = 0
+        end = time.time() + self.frequency_time_to_measure
+        try:
+            while end > time.time():
+                GPIO.wait_for_edge(pin_registry['frequency_input'], GPIO.RISING)
+                count += 1
+        except RuntimeError: # if the previous event failed
+            return
+        value = count/float(self.frequency_time_to_measure) - 4
+        if abs(value - 60) < 4:
+            latest_values['frequency'] = round(value,1)
+        frequency_watchdog += 1
+        
 
 # # the logger just takes the values and updates the global variables
 def value_update():
@@ -135,6 +137,9 @@ def value_update():
 
     global latest_values
     global pin_registry
+    
+    # I/O init
+    GPIO.setup(pin_registry['frequency_input'], GPIO.IN)
 
     # timer
     time_to_measure = 4 # in seconds
@@ -142,6 +147,15 @@ def value_update():
     print('Value Update Initialized')
     
     while True:
+        
+        # frequency
+        current_num = frequency_watchdog
+        thread = frequency_update()
+        thread.start()
+        thread.join(1)
+        if current_num == frequency_watchdog:
+            latest_values['frequency'] = 0
+        
         # voltage measure
         voltage_stack = []
         end = time.time() + time_to_measure
@@ -228,12 +242,11 @@ def commander():
         # basic on/off 1
         # hard reset 2 (cloud also needs to be able to)
         if button_status == 1:
-            command_list[0] = not command_list[0]
+            command_list[0] = inc.next()
             button_status = 0
         elif button_status == 2:
             command_list[2] = 1 # reset remote
             command_list[3] = 1 # reset current
-            command_list[0] = 0 # button off (so it doesn't randomly start)
             button_status = 0
         sleep(1)
         
@@ -403,7 +416,7 @@ def cloud_logger():
     	    try:
                 response = urllib2.urlopen(request).read()
                 request_stack.remove(r)
-                time.sleep(1)
+                time.sleep(15)
                 
             except urllib2.URLError:
                 print 'Cloud Thread Failed'
@@ -429,7 +442,11 @@ def cloud_logger():
         sleep(60)
     
 
-
+# helper function to alternate button presses
+def inc():
+    while True:
+        yield 0
+        yield 1
 
 print('Initialized')
 
