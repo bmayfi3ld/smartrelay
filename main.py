@@ -414,9 +414,9 @@ def cloud_logger():
         response = ''
         for r in list(request_stack):
     	    try:
-                response = urllib2.urlopen(request).read()
+                response = urllib2.urlopen(r).read()
                 request_stack.remove(r)
-                time.sleep(15)
+                time.sleep(5)
                 
             except urllib2.URLError:
                 print 'Cloud Thread Failed'
