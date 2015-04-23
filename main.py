@@ -19,6 +19,7 @@ import Adafruit_DHT                     # temp and humidity sensor driver
 import Adafruit_BBIO.PWM as PWM         # PWM
 import smtplib                          # for sending mail
 import urllib2                          # to post data to gae
+from itertools import cycle             # for button toggle
 
 print('Starting Up')
 # # responsible for heartbeat
@@ -103,6 +104,7 @@ pin_registry = {
 
 frequency_watchdog = 0
 # global setup
+button_toggle = cycle(range(2))
 ADC.setup()
 
 class frequency_update(threading.Thread):
@@ -242,7 +244,7 @@ def commander():
         # basic on/off 1
         # hard reset 2 (cloud also needs to be able to)
         if button_status == 1:
-            command_list[0] = inc.next()
+            command_list[0] = button_toggle.next()
             button_status = 0
         elif button_status == 2:
             command_list[2] = 1 # reset remote
@@ -441,12 +443,6 @@ def cloud_logger():
     	
         sleep(60)
     
-
-# helper function to alternate button presses
-def inc():
-    while True:
-        yield 0
-        yield 1
 
 print('Initialized')
 
