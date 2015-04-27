@@ -47,10 +47,6 @@ def runner():
         sleep(blink)
         GPIO.output(pin_registry['led1'], GPIO.LOW)
         
-        
-        # print '{},{}'.format(latest_values['current'],latest_values['frequency'])
-        
-        
         sleep(1)
 
 thread.start_new_thread(runner, ())
@@ -145,6 +141,7 @@ def value_update():
 
     # timer
     time_to_measure = 4 # in seconds
+    counter = 0
     
     print('Value Update Initialized')
     
@@ -176,10 +173,13 @@ def value_update():
         while end > time.time():
             current_stack.append(ADC.read(pin_registry['current_ain']))
         value = max(current_stack)
+        value *=  1.8
         if value < .03:
             value = 0
-        value = value * 1.8 * 10
+        value *= 10
         latest_values['current'] = round(value,1)
+        counter += 1
+        print '{},{}'.format(latest_values['current'], counter)
         
         
         sleep(5)
