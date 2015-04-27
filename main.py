@@ -179,7 +179,7 @@ def value_update():
         value *= 10
         latest_values['current'] = round(value,1)
         counter += 1
-        print '{},{}'.format(latest_values['voltage'], counter)
+        # print '{},{}'.format(latest_values['voltage'], counter)
         
         
         sleep(5)
